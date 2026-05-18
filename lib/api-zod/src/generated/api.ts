@@ -374,7 +374,8 @@ export const GetOutThisWeekResponse = zod.array(GetOutThisWeekResponseItem)
  * @summary Get time off balance for all employees (admin)
  */
 export const GetTimeOffBalancesQueryParams = zod.object({
-  "employeeId": zod.coerce.number().optional()
+  "employeeId": zod.coerce.number().optional(),
+  "year": zod.coerce.number().optional()
 })
 
 export const GetTimeOffBalancesResponseItem = zod.object({
@@ -385,7 +386,24 @@ export const GetTimeOffBalancesResponseItem = zod.object({
   "usedHours": zod.number(),
   "plannedHours": zod.number(),
   "remainingHours": zod.number(),
-  "usedPlusPlannedHours": zod.number()
+  "usedPlusPlannedHours": zod.number(),
+  "year": zod.number(),
+  "breakdown": zod.array(zod.object({
+  "type": zod.string(),
+  "usedHours": zod.number(),
+  "plannedHours": zod.number(),
+  "totalHours": zod.number()
+})),
+  "requests": zod.array(zod.object({
+  "id": zod.number(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "type": zod.string(),
+  "days": zod.number(),
+  "hours": zod.number(),
+  "status": zod.string(),
+  "notes": zod.string().nullish()
+}))
 })
 export const GetTimeOffBalancesResponse = zod.array(GetTimeOffBalancesResponseItem)
 

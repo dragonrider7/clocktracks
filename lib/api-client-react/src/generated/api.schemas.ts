@@ -280,6 +280,25 @@ export interface OutThisWeekEntry {
   endDate: string;
 }
 
+export interface TimeOffTypeBreakdown {
+  type: string;
+  usedHours: number;
+  plannedHours: number;
+  totalHours: number;
+}
+
+export interface TimeOffRequestSummary {
+  id: number;
+  startDate: string;
+  endDate: string;
+  type: string;
+  days: number;
+  hours: number;
+  status: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export interface TimeOffBalance {
   employeeId: number;
   employeeName: string;
@@ -290,6 +309,9 @@ export interface TimeOffBalance {
   plannedHours: number;
   remainingHours: number;
   usedPlusPlannedHours: number;
+  year: number;
+  breakdown: TimeOffTypeBreakdown[];
+  requests: TimeOffRequestSummary[];
 }
 
 export interface EmployeeTimesheet {
@@ -324,6 +346,7 @@ export const ListTimeOffRequestsStatus = {
 
 export type GetTimeOffBalancesParams = {
 employeeId?: number;
+year?: number;
 };
 
 export type GetTimesheetReportParams = {

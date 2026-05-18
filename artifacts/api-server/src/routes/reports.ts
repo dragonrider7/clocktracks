@@ -225,11 +225,22 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
 });
 
 router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
-  const { employeeId } = req.query;
+  const { employeeId, year } = req.query;
+  const yearNum = year ? parseInt(year as string) : new Date().getFullYear();
+  const yearStart = `${yearNum}-01-01`;
+  const yearEnd = `${yearNum}-12-31`;
 
   const [employees, requests] = await Promise.all([
     db.select().from(employeesTable).orderBy(employeesTable.name),
-    db.select().from(timeOffRequestsTable),
+    db
+      .select()
+      .from(timeOffRequestsTable)
+      .where(
+        and(
+          gte(timeOffRequestsTable.startDate, yearStart),
+          lte(timeOffRequestsTable.startDate, yearEnd)
+        )
+      ),
   ]);
 
   const filtered = employeeId
@@ -237,13 +248,44 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
     : employees;
 
   const result = filtered.map((emp) => {
-    const empReqs = requests.filter((r) => r.employeeId === emp.id);
-    const usedHours = empReqs
-      .filter((r) => r.status === "approved")
-      .reduce((sum, r) => sum + calcDays(r.startDate, r.endDate) * 8, 0);
-    const plannedHours = empReqs
-      .filter((r) => r.status === "pending")
-      .reduce((sum, r) => sum + calcDays(r.startDate, r.endDate) * 8, 0);
+    const empReqs = requests
+      .filter((r) => r.employeeId === emp.id && r.status !== "denied")
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+    const breakdownMap: Record<string, { usedHours: number; plannedHours: number }> = {};
+    let usedHours = 0;
+    let plannedHours = 0;
+
+    for (const r of empReqs) {
+      const hours = calcDays(r.startDate, r.endDate) * 8;
+      if (!breakdownMap[r.type]) breakdownMap[r.type] = { usedHours: 0, plannedHours: 0 };
+      if (r.status === "approved") {
+        breakdownMap[r.type].usedHours += hours;
+        usedHours += hours;
+      } else if (r.status === "pending") {
+        breakdownMap[r.type].plannedHours += hours;
+        plannedHours += hours;
+      }
+    }
+
+    const breakdown = Object.entries(breakdownMap).map(([type, b]) => ({
+      type,
+      usedHours: b.usedHours,
+      plannedHours: b.plannedHours,
+      totalHours: b.usedHours + b.plannedHours,
+    }));
+
+    const requestSummaries = empReqs.map((r) => ({
+      id: r.id,
+      startDate: r.startDate,
+      endDate: r.endDate,
+      type: r.type,
+      days: calcDays(r.startDate, r.endDate),
+      hours: calcDays(r.startDate, r.endDate) * 8,
+      status: r.status,
+      notes: r.notes ?? null,
+    }));
+
     const allottedHours = emp.timeOffAllotmentHours ?? 80;
     return {
       employeeId: emp.id,
@@ -254,6 +296,9 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
       plannedHours,
       remainingHours: Math.max(0, allottedHours - usedHours),
       usedPlusPlannedHours: usedHours + plannedHours,
+      year: yearNum,
+      breakdown,
+      requests: requestSummaries,
     };
   });
 

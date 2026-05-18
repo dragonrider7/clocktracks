@@ -5,6 +5,8 @@
  * Time Clock API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TimeOffRequestSummary } from './timeOffRequestSummary';
+import type { TimeOffTypeBreakdown } from './timeOffTypeBreakdown';
 
 export interface TimeOffBalance {
   employeeId: number;
@@ -16,4 +18,7 @@ export interface TimeOffBalance {
   plannedHours: number;
   remainingHours: number;
   usedPlusPlannedHours: number;
+  year: number;
+  breakdown: TimeOffTypeBreakdown[];
+  requests: TimeOffRequestSummary[];
 }

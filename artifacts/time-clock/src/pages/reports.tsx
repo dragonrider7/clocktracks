@@ -4,13 +4,13 @@ import {
   useGetTimeOffBalances,
   useListEmployees,
 } from "@workspace/api-client-react";
-import type { TimesheetEntry } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { TimesheetEntry, TimeOffBalance } from "@workspace/api-client-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, ChevronDown, ChevronUp, Clock4, Umbrella } from "lucide-react";
+import { Printer, ChevronDown, ChevronUp, Clock4, Umbrella, CalendarDays } from "lucide-react";
 import { useMe } from "@/App";
 import { Redirect } from "wouter";
 import { EmployeeAvatar } from "@/components/employee-avatar";
@@ -96,75 +96,278 @@ function EntryRow({ entry }: { entry: TimesheetEntry }) {
   );
 }
 
-// ─── Time Off Balances Tab ───────────────────────────────────────────────────
-function TimeOffBalancesTab({ employees }: { employees: { id: number; name: string }[] | undefined }) {
-  const [filterEmployee, setFilterEmployee] = useState<string>("all");
-  const employeeId = filterEmployee !== "all" ? parseInt(filterEmployee) : undefined;
-  const { data: balances, isLoading } = useGetTimeOffBalances(employeeId ? { employeeId } : {});
+// ─── Type colors/labels for breakdown ────────────────────────────────────────
+const TYPE_BG: Record<string, string> = {
+  vacation: "bg-blue-500", pto: "bg-sky-400", sick: "bg-red-400",
+  bereavement: "bg-gray-400", personal: "bg-purple-400", other: "bg-zinc-400",
+};
+const TYPE_PENDING_BG: Record<string, string> = {
+  vacation: "bg-blue-200", pto: "bg-sky-200", sick: "bg-red-200",
+  bereavement: "bg-gray-200", personal: "bg-purple-200", other: "bg-zinc-200",
+};
+
+function fmtDateRange(start: string, end: string): string {
+  const s = new Date(start + "T00:00:00");
+  const e = new Date(end + "T00:00:00");
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  if (s.getTime() === e.getTime()) return s.toLocaleDateString([], opts);
+  if (s.getFullYear() === e.getFullYear()) return `${s.toLocaleDateString([], opts)} – ${e.toLocaleDateString([], opts)}`;
+  return `${s.toLocaleDateString([], { ...opts, year: "numeric" })} – ${e.toLocaleDateString([], { ...opts, year: "numeric" })}`;
+}
+
+function EmployeeBalanceCard({ b }: { b: TimeOffBalance }) {
+  const [expanded, setExpanded] = useState(false);
+  const pctUsed = b.allottedHours > 0 ? Math.min(100, (b.usedHours / b.allottedHours) * 100) : 0;
+  const pctPlanned = b.allottedHours > 0 ? Math.min(100 - pctUsed, (b.plannedHours / b.allottedHours) * 100) : 0;
+  const overBudget = b.usedPlusPlannedHours > b.allottedHours;
+  const hasRequests = b.requests.length > 0;
+  const approved = b.requests.filter((r) => r.status === "approved");
+  const pending = b.requests.filter((r) => r.status === "pending");
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Employee</label>
-          <Select value={filterEmployee} onValueChange={setFilterEmployee}>
-            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Employees</SelectItem>
-              {employees?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+    <Card className="overflow-hidden">
+      {/* Top progress bar */}
+      <div className="h-1.5 w-full bg-muted overflow-hidden">
+        <div className="h-full flex">
+          <div className="bg-blue-500 h-full transition-all" style={{ width: `${pctUsed}%` }} />
+          <div className="bg-amber-400 h-full transition-all" style={{ width: `${pctPlanned}%` }} />
         </div>
       </div>
 
+      {/* Summary row */}
+      <div
+        className={`px-5 py-4 ${hasRequests ? "cursor-pointer hover:bg-muted/30 transition-colors" : ""}`}
+        onClick={() => hasRequests && setExpanded((v) => !v)}
+      >
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <EmployeeAvatar name={b.employeeName} size="md" />
+            <div>
+              <p className="font-semibold">{b.employeeName}</p>
+              {b.department && <p className="text-xs text-muted-foreground">{b.department}</p>}
+            </div>
+          </div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="text-center min-w-[3rem]">
+                <div className="text-lg font-bold">{fmtHours(b.allottedHours)}</div>
+                <div className="text-xs text-muted-foreground">Allotted</div>
+              </div>
+              <div className="text-center min-w-[3rem]">
+                <div className="text-lg font-bold text-blue-600">{fmtHours(b.usedHours)}</div>
+                <div className="text-xs text-muted-foreground">Used</div>
+              </div>
+              <div className="text-center min-w-[3rem]">
+                <div className="text-lg font-bold text-amber-500">{fmtHours(b.plannedHours)}</div>
+                <div className="text-xs text-muted-foreground">Planned</div>
+              </div>
+              <div className="text-center min-w-[3rem] border-l pl-4">
+                <div className={`text-lg font-bold ${overBudget ? "text-destructive" : "text-emerald-600"}`}>
+                  {overBudget ? "0h" : fmtHours(b.remainingHours)}
+                </div>
+                <div className="text-xs text-muted-foreground">Remaining</div>
+                {overBudget && (
+                  <Badge variant="destructive" className="text-[10px] mt-0.5">
+                    Over {fmtHours(b.usedPlusPlannedHours - b.allottedHours)}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            {hasRequests && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {b.requests.length} {b.requests.length === 1 ? "request" : "requests"}
+                {expanded ? <ChevronUp className="h-3.5 w-3.5 ml-1" /> : <ChevronDown className="h-3.5 w-3.5 ml-1" />}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Per-type breakdown pills — always visible */}
+        {b.breakdown.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {b.breakdown.map((bd) => {
+              const label = TIME_OFF_TYPE_LABELS[bd.type] ?? bd.type;
+              const color = TIME_OFF_TYPE_COLORS[bd.type] ?? TIME_OFF_TYPE_COLORS.other;
+              return (
+                <span key={bd.type} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}>
+                  {label}
+                  {bd.usedHours > 0 && <span className="font-bold">{fmtHours(bd.usedHours)} used</span>}
+                  {bd.plannedHours > 0 && (
+                    <span className="opacity-75">{bd.usedHours > 0 ? " · " : ""}{fmtHours(bd.plannedHours)} planned</span>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Expanded details */}
+      {expanded && hasRequests && (
+        <div className="border-t bg-muted/20">
+          {/* Approved requests */}
+          {approved.length > 0 && (
+            <div>
+              <div className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b bg-muted/30">
+                Approved ({approved.length})
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left px-5 py-2 font-medium text-muted-foreground">Date(s)</th>
+                    <th className="text-left px-5 py-2 font-medium text-muted-foreground">Type</th>
+                    <th className="text-center px-5 py-2 font-medium text-muted-foreground">Days</th>
+                    <th className="text-center px-5 py-2 font-medium text-muted-foreground">Hours</th>
+                    <th className="text-left px-5 py-2 font-medium text-muted-foreground">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approved.map((r) => (
+                    <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="px-5 py-2 text-muted-foreground">{fmtDateRange(r.startDate, r.endDate)}</td>
+                      <td className="px-5 py-2">
+                        <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${TIME_OFF_TYPE_COLORS[r.type] ?? TIME_OFF_TYPE_COLORS.other}`}>
+                          {TIME_OFF_TYPE_LABELS[r.type] ?? r.type}
+                        </span>
+                      </td>
+                      <td className="px-5 py-2 text-center tabular-nums">{r.days}d</td>
+                      <td className="px-5 py-2 text-center tabular-nums font-medium">{fmtHours(r.hours)}</td>
+                      <td className="px-5 py-2 text-muted-foreground text-xs">{r.notes || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pending requests */}
+          {pending.length > 0 && (
+            <div className={approved.length > 0 ? "border-t" : ""}>
+              <div className="px-5 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b bg-muted/30">
+                Pending Approval ({pending.length})
+              </div>
+              <table className="w-full text-sm">
+                {approved.length === 0 && (
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left px-5 py-2 font-medium text-muted-foreground">Date(s)</th>
+                      <th className="text-left px-5 py-2 font-medium text-muted-foreground">Type</th>
+                      <th className="text-center px-5 py-2 font-medium text-muted-foreground">Days</th>
+                      <th className="text-center px-5 py-2 font-medium text-muted-foreground">Hours</th>
+                      <th className="text-left px-5 py-2 font-medium text-muted-foreground">Notes</th>
+                    </tr>
+                  </thead>
+                )}
+                <tbody>
+                  {pending.map((r) => (
+                    <tr key={r.id} className="border-b last:border-0 hover:bg-amber-50/50 bg-amber-50/30">
+                      <td className="px-5 py-2 text-muted-foreground">{fmtDateRange(r.startDate, r.endDate)}</td>
+                      <td className="px-5 py-2">
+                        <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${TIME_OFF_TYPE_COLORS[r.type] ?? TIME_OFF_TYPE_COLORS.other}`}>
+                          {TIME_OFF_TYPE_LABELS[r.type] ?? r.type}
+                        </span>
+                      </td>
+                      <td className="px-5 py-2 text-center tabular-nums">{r.days}d</td>
+                      <td className="px-5 py-2 text-center tabular-nums font-medium">{fmtHours(r.hours)}</td>
+                      <td className="px-5 py-2 text-muted-foreground text-xs">{r.notes || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Time Off Balances Tab ───────────────────────────────────────────────────
+function TimeOffBalancesTab({ employees }: { employees: { id: number; name: string }[] | undefined }) {
+  const [filterEmployee, setFilterEmployee] = useState<string>("all");
+  const [year, setYear] = useState<string>(String(new Date().getFullYear()));
+  const employeeId = filterEmployee !== "all" ? parseInt(filterEmployee) : undefined;
+  const yearParam = parseInt(year);
+  const { data: balances, isLoading } = useGetTimeOffBalances(
+    { ...(employeeId ? { employeeId } : {}), year: yearParam },
+  );
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear, currentYear - 1, currentYear - 2].map(String);
+
+  const totalUsed = balances?.reduce((s, b) => s + b.usedHours, 0) ?? 0;
+  const totalPlanned = balances?.reduce((s, b) => s + b.plannedHours, 0) ?? 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year</label>
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Employee</label>
+              <Select value={filterEmployee} onValueChange={setFilterEmployee}>
+                <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {employees?.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {isLoading ? (
-        <div className="space-y-3"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+        <div className="space-y-3">
+          <Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" />
+        </div>
       ) : !balances || balances.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">No data available.</CardContent></Card>
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            No time off data for {year}.
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
-          {balances.map((b) => {
-            const pctUsed = b.allottedHours > 0 ? Math.min(100, (b.usedHours / b.allottedHours) * 100) : 0;
-            const pctPlanned = b.allottedHours > 0 ? Math.min(100 - pctUsed, (b.plannedHours / b.allottedHours) * 100) : 0;
-            const overBudget = b.usedPlusPlannedHours > b.allottedHours;
-            return (
-              <Card key={b.employeeId} className="overflow-hidden">
-                <div className="h-1 w-full bg-muted overflow-hidden">
-                  <div className="h-full flex">
-                    <div className="bg-blue-500 h-full transition-all" style={{ width: `${pctUsed}%` }} />
-                    <div className="bg-amber-400 h-full transition-all" style={{ width: `${pctPlanned}%` }} />
-                  </div>
-                </div>
-                <CardContent className="py-4 px-5">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-3">
-                      <EmployeeAvatar name={b.employeeName} size="md" />
-                      <div>
-                        <p className="font-semibold">{b.employeeName}</p>
-                        {b.department && <p className="text-xs text-muted-foreground">{b.department}</p>}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-sm">
-                      <div className="text-center"><div className="text-lg font-bold">{fmtHours(b.allottedHours)}</div><div className="text-xs text-muted-foreground">Allotted</div></div>
-                      <div className="text-center"><div className="text-lg font-bold text-blue-600">{fmtHours(b.usedHours)}</div><div className="text-xs text-muted-foreground">Used</div></div>
-                      <div className="text-center"><div className="text-lg font-bold text-amber-500">{fmtHours(b.plannedHours)}</div><div className="text-xs text-muted-foreground">Planned</div></div>
-                      <div className="text-center"><div className="text-lg font-bold text-emerald-600">{fmtHours(b.usedPlusPlannedHours)}</div><div className="text-xs text-muted-foreground">Used + Planned</div></div>
-                      <div className="text-center border-l pl-4">
-                        <div className={`text-lg font-bold ${overBudget ? "text-destructive" : ""}`}>
-                          {overBudget ? "0h" : fmtHours(b.remainingHours)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Remaining</div>
-                        {overBudget && <Badge variant="destructive" className="text-[10px] mt-0.5">Over by {fmtHours(b.usedPlusPlannedHours - b.allottedHours)}</Badge>}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {balances.map((b) => <EmployeeBalanceCard key={b.employeeId} b={b} />)}
+
+          {/* Footer totals */}
+          <Card className="bg-muted/30">
+            <CardContent className="py-3 px-5 flex items-center justify-between flex-wrap gap-3">
+              <span className="font-semibold">Total — {year}</span>
+              <div className="flex items-center gap-4 text-sm flex-wrap">
+                <span className="text-muted-foreground">{balances.length} employees</span>
+                <span className="flex items-center gap-1.5 font-medium text-blue-600">
+                  <span className="inline-block h-2 w-2 rounded bg-blue-500" />
+                  {fmtHours(totalUsed)} used
+                </span>
+                {totalPlanned > 0 && (
+                  <span className="flex items-center gap-1.5 font-medium text-amber-600">
+                    <span className="inline-block h-2 w-2 rounded bg-amber-400" />
+                    {fmtHours(totalPlanned)} planned
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex gap-4 text-xs text-muted-foreground pt-1">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded bg-blue-500" /> Approved / Used</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded bg-amber-400" /> Pending / Planned</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded bg-blue-500" /> Used (approved)</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded bg-amber-400" /> Planned (pending)</span>
+            <span className="text-muted-foreground/60">Click a card to expand individual requests</span>
           </div>
         </div>
       )}

@@ -468,6 +468,11 @@ paths:
           required: false
           schema:
             type: integer
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: Time off balances
@@ -899,9 +904,43 @@ components:
         endDate:
           type: string
 
+    TimeOffTypeBreakdown:
+      type: object
+      required: [type, usedHours, plannedHours, totalHours]
+      properties:
+        type:
+          type: string
+        usedHours:
+          type: number
+        plannedHours:
+          type: number
+        totalHours:
+          type: number
+
+    TimeOffRequestSummary:
+      type: object
+      required: [id, startDate, endDate, type, days, hours, status]
+      properties:
+        id:
+          type: integer
+        startDate:
+          type: string
+        endDate:
+          type: string
+        type:
+          type: string
+        days:
+          type: integer
+        hours:
+          type: number
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+
     TimeOffBalance:
       type: object
-      required: [employeeId, employeeName, allottedHours, usedHours, plannedHours, remainingHours, usedPlusPlannedHours]
+      required: [employeeId, employeeName, allottedHours, usedHours, plannedHours, remainingHours, usedPlusPlannedHours, year, breakdown, requests]
       properties:
         employeeId:
           type: integer
@@ -919,6 +958,16 @@ components:
           type: number
         usedPlusPlannedHours:
           type: number
+        year:
+          type: integer
+        breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeOffTypeBreakdown"
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeOffRequestSummary"
 
     EmployeeTimesheet:
       type: object

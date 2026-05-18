@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetTimeOffBalancesParams = {
-employeeId?: number;
-year?: number;
-};
+export interface TimeOffTypeBreakdown {
+  type: string;
+  usedHours: number;
+  plannedHours: number;
+  totalHours: number;
+}
