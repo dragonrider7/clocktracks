@@ -12,6 +12,8 @@ export interface EmployeeTimesheet {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   totalMinutes: number;
   totalTimeOffMinutes: number;
   entries: TimesheetEntry[];

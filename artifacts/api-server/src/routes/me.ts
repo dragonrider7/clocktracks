@@ -21,6 +21,22 @@ router.get("/me", async (req, res): Promise<void> => {
     .from(employeesTable)
     .where(eq(employeesTable.clerkUserId, clerkUserId));
 
+  // Sync imageUrl for already-linked users if it's not yet cached
+  if (employee && !employee.imageUrl) {
+    try {
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      if (clerkUser.imageUrl) {
+        [employee] = await db
+          .update(employeesTable)
+          .set({ imageUrl: clerkUser.imageUrl })
+          .where(eq(employeesTable.id, employee.id))
+          .returning();
+      }
+    } catch (err) {
+      req.log.warn({ err }, "Could not sync imageUrl from Clerk");
+    }
+  }
+
   if (!employee) {
     let clerkUser;
     try {
@@ -41,10 +57,10 @@ router.get("/me", async (req, res): Promise<void> => {
         .where(eq(employeesTable.email, email));
 
       if (employee) {
-        // Link the Clerk user ID so future lookups skip this step
+        // Link the Clerk user ID and sync imageUrl so future lookups skip this step
         [employee] = await db
           .update(employeesTable)
-          .set({ clerkUserId })
+          .set({ clerkUserId, imageUrl: clerkUser.imageUrl ?? null })
           .where(eq(employeesTable.id, employee.id))
           .returning();
       }
@@ -67,7 +83,7 @@ router.get("/me", async (req, res): Promise<void> => {
 
         [employee] = await db
           .insert(employeesTable)
-          .values({ name, email: email ?? null, clerkUserId, role: "admin" })
+          .values({ name, email: email ?? null, clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
           .returning();
       } else {
         // Not the first user and no matching employee record → deny access

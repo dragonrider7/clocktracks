@@ -206,7 +206,7 @@ export default function Employees() {
                   <TableRow key={emp.id} data-testid={`row-employee-${emp.id}`}>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
-                        <EmployeeAvatar name={emp.name} size="sm" />
+                        <EmployeeAvatar name={emp.name} imageUrl={emp.imageUrl} size="sm" />
                         <span className="font-medium">{emp.name}</span>
                       </div>
                     </TableCell>

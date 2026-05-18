@@ -148,7 +148,7 @@ export default function Dashboard() {
                     className="w-full flex items-center justify-between rounded-xl bg-muted/30 px-4 py-3 hover:bg-muted/60 transition-colors group text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <EmployeeAvatar name={emp.employeeName} size="md" />
+                      <EmployeeAvatar name={emp.employeeName} imageUrl={emp.imageUrl} size="md" />
                       <div>
                         <p className="text-sm font-semibold leading-none">{emp.employeeName}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{emp.department ?? "No Department"}</p>
@@ -195,7 +195,7 @@ export default function Dashboard() {
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <EmployeeAvatar name={emp.employeeName} size="xs" />
+                          <EmployeeAvatar name={emp.employeeName} imageUrl={emp.imageUrl} size="xs" />
                           <span className="font-medium">{emp.employeeName}</span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -243,7 +243,7 @@ export default function Dashboard() {
                     onClick={() => setLocation("/time-off")}
                     className="flex items-center gap-3 p-3 rounded-xl border bg-violet-50 border-violet-100 hover:bg-violet-100/70 transition-colors group text-left"
                   >
-                    <EmployeeAvatar name={item.employeeName} size="md" />
+                    <EmployeeAvatar name={item.employeeName} imageUrl={item.imageUrl} size="md" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{item.employeeName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -290,7 +290,7 @@ export default function Dashboard() {
                         : "bg-amber-50 border-amber-100"
                     }`}
                   >
-                    <EmployeeAvatar name={event.employeeName} size="md" />
+                    <EmployeeAvatar name={event.employeeName} imageUrl={event.imageUrl} size="md" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{event.employeeName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">

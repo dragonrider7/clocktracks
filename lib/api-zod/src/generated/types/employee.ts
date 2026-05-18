@@ -23,5 +23,7 @@ export interface Employee {
   hiredDate?: string | null;
   /** @nullable */
   birthday?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   createdAt: string;
 }

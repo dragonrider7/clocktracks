@@ -103,7 +103,7 @@ export default function ClockPage() {
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1.5">
-                        <EmployeeAvatar name={emp.name} size="sm" />
+                        <EmployeeAvatar name={emp.name} imageUrl={emp.imageUrl} size="sm" />
                         <div className="font-medium text-sm truncate">{emp.name}</div>
                       </div>
                       <div className="text-xs text-muted-foreground pl-10">
@@ -121,7 +121,7 @@ export default function ClockPage() {
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-xl border p-4 bg-muted/30">
-              <EmployeeAvatar name={me?.name ?? "?"} size="md" />
+              <EmployeeAvatar name={me?.name ?? "?"} imageUrl={me?.imageUrl} size="md" />
               <div>
                 <div className="font-semibold">{me?.name}</div>
                 <div className="text-sm text-muted-foreground">{me?.department ?? me?.role}</div>
@@ -218,7 +218,7 @@ export default function ClockPage() {
               {status?.clockedInEmployees?.map((e) => (
                 <div key={e.employeeId} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
-                    <EmployeeAvatar name={e.employeeName} size="sm" />
+                    <EmployeeAvatar name={e.employeeName} imageUrl={e.imageUrl} size="sm" />
                     <div>
                       <div className="font-medium text-sm">{e.employeeName}</div>
                       <div className="text-xs text-muted-foreground">{e.department ?? ""}</div>

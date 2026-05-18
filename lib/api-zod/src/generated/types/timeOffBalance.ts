@@ -13,6 +13,8 @@ export interface TimeOffBalance {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   allottedHours: number;
   usedHours: number;
   plannedHours: number;

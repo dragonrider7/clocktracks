@@ -33,6 +33,8 @@ export interface Employee {
   hiredDate?: string | null;
   /** @nullable */
   birthday?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -308,6 +310,8 @@ export interface ClockedInEmployee {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   clockIn: string;
   timeEntryId: number;
 }
@@ -324,6 +328,8 @@ export interface EmployeeWeeklyHours {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   totalMinutes: number;
   daysWorked: number;
 }
@@ -350,6 +356,8 @@ export interface OutThisWeekEntry {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   type: OutThisWeekEntryType;
   startDate: string;
   endDate: string;
@@ -368,6 +376,8 @@ export interface UpcomingEvent {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   kind: UpcomingEventKind;
   label: string;
   date: string;
@@ -400,6 +410,8 @@ export interface TimeOffBalance {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   allottedHours: number;
   usedHours: number;
   plannedHours: number;
@@ -415,6 +427,8 @@ export interface EmployeeTimesheet {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   totalMinutes: number;
   totalTimeOffMinutes: number;
   entries: TimesheetEntry[];

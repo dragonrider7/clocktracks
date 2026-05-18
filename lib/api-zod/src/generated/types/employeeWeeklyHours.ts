@@ -11,6 +11,8 @@ export interface EmployeeWeeklyHours {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   totalMinutes: number;
   daysWorked: number;
 }

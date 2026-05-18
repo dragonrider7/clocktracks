@@ -649,6 +649,8 @@ components:
           type: ["string", "null"]
         birthday:
           type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -954,6 +956,8 @@ components:
           type: string
         department:
           type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
         clockIn:
           type: string
         timeEntryId:
@@ -968,6 +972,8 @@ components:
         employeeName:
           type: string
         department:
+          type: ["string", "null"]
+        imageUrl:
           type: ["string", "null"]
         totalMinutes:
           type: integer
@@ -993,6 +999,8 @@ components:
           type: string
         department:
           type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
         type:
           type: string
           enum: [vacation, pto, sick, bereavement, personal, other]
@@ -1010,6 +1018,8 @@ components:
         employeeName:
           type: string
         department:
+          type: ["string", "null"]
+        imageUrl:
           type: ["string", "null"]
         kind:
           type: string
@@ -1067,6 +1077,8 @@ components:
           type: string
         department:
           type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
         allottedHours:
           type: integer
         usedHours:
@@ -1097,6 +1109,8 @@ components:
         employeeName:
           type: string
         department:
+          type: ["string", "null"]
+        imageUrl:
           type: ["string", "null"]
         totalMinutes:
           type: integer

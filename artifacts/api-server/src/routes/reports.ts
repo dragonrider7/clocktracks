@@ -42,7 +42,7 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
 
   const [rows, allEmployees, allTimeOff, holidays] = await Promise.all([
     db
-      .select({ entry: timeEntriesTable, employeeName: employeesTable.name, department: employeesTable.department })
+      .select({ entry: timeEntriesTable, employeeName: employeesTable.name, department: employeesTable.department, imageUrl: employeesTable.imageUrl })
       .from(timeEntriesTable)
       .leftJoin(employeesTable, eq(timeEntriesTable.employeeId, employeesTable.id))
       .where(and(...entryConditions))
@@ -95,6 +95,7 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
     employeeId: number;
     employeeName: string;
     department: string | null;
+    imageUrl: string | null;
     totalMinutes: number;
     totalTimeOffMinutes: number;
     entries: TimesheetEntry[];
@@ -102,12 +103,13 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
 
   const byEmployee = new Map<number, EmployeeSheet>();
 
-  const ensureEmployee = (id: number, name: string, dept: string | null) => {
+  const ensureEmployee = (id: number, name: string, dept: string | null, imgUrl: string | null = null) => {
     if (!byEmployee.has(id)) {
       byEmployee.set(id, {
         employeeId: id,
         employeeName: name,
         department: dept,
+        imageUrl: imgUrl,
         totalMinutes: 0,
         totalTimeOffMinutes: 0,
         entries: [],
@@ -118,12 +120,12 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
 
   // Seed all employees (so holidays appear for everyone)
   for (const emp of allEmployees) {
-    ensureEmployee(emp.id, emp.name, emp.department ?? null);
+    ensureEmployee(emp.id, emp.name, emp.department ?? null, emp.imageUrl ?? null);
   }
 
   // Work entries
-  for (const { entry, employeeName, department } of rows) {
-    const emp = ensureEmployee(entry.employeeId, employeeName ?? "Unknown", department ?? null);
+  for (const { entry, employeeName, department, imageUrl } of rows) {
+    const emp = ensureEmployee(entry.employeeId, employeeName ?? "Unknown", department ?? null, imageUrl ?? null);
     let totalMinutes: number | null = null;
     if (entry.clockOut) {
       totalMinutes = Math.round((entry.clockOut.getTime() - entry.clockIn.getTime()) / 60000);
@@ -286,6 +288,7 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
       employeeId: emp.id,
       employeeName: emp.name,
       department: emp.department ?? null,
+      imageUrl: emp.imageUrl ?? null,
       allottedHours,
       usedHours,
       plannedHours,

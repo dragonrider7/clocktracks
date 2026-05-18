@@ -141,7 +141,7 @@ function EmployeeBalanceCard({ b }: { b: TimeOffBalance }) {
       >
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <EmployeeAvatar name={b.employeeName} size="md" />
+            <EmployeeAvatar name={b.employeeName} imageUrl={b.imageUrl} size="md" />
             <div>
               <p className="font-semibold">{b.employeeName}</p>
               {b.department && <p className="text-xs text-muted-foreground">{b.department}</p>}
@@ -460,7 +460,7 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
                   onClick={() => toggleExpand(emp.employeeId)}
                 >
                   <div className="flex items-center gap-3">
-                    <EmployeeAvatar name={emp.employeeName} size="sm" />
+                    <EmployeeAvatar name={emp.employeeName} imageUrl={emp.imageUrl} size="sm" />
                     <div>
                       <span className="font-semibold">{emp.employeeName}</span>
                       {emp.department && <span className="text-xs text-muted-foreground ml-2">— {emp.department}</span>}

@@ -11,6 +11,8 @@ export interface ClockedInEmployee {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   clockIn: string;
   timeEntryId: number;
 }

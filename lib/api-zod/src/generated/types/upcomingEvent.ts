@@ -12,6 +12,8 @@ export interface UpcomingEvent {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   kind: UpcomingEventKind;
   label: string;
   date: string;

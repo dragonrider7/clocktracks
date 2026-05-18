@@ -13,6 +13,8 @@ export interface OutThisWeekEntry {
   employeeName: string;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   type: OutThisWeekEntryType;
   startDate: string;
   endDate: string;

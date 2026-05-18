@@ -12,7 +12,7 @@ router.get("/dashboard/current-status", async (_req, res): Promise<void> => {
   const [allEmployees, clockedInEntries, todayEntries] = await Promise.all([
     db.select().from(employeesTable),
     db
-      .select({ entry: timeEntriesTable, employeeName: employeesTable.name, department: employeesTable.department })
+      .select({ entry: timeEntriesTable, employeeName: employeesTable.name, department: employeesTable.department, imageUrl: employeesTable.imageUrl })
       .from(timeEntriesTable)
       .leftJoin(employeesTable, eq(timeEntriesTable.employeeId, employeesTable.id))
       .where(isNull(timeEntriesTable.clockOut)),
@@ -39,10 +39,11 @@ router.get("/dashboard/current-status", async (_req, res): Promise<void> => {
     clockedInCount: clockedInEntries.length,
     totalEmployees: allEmployees.length,
     todayTotalHours: Math.round((todayTotalMinutes / 60) * 10) / 10,
-    clockedInEmployees: clockedInEntries.map(({ entry, employeeName, department }) => ({
+    clockedInEmployees: clockedInEntries.map(({ entry, employeeName, department, imageUrl }) => ({
       employeeId: entry.employeeId,
       employeeName: employeeName ?? "Unknown",
       department: department ?? null,
+      imageUrl: imageUrl ?? null,
       clockIn: entry.clockIn.toISOString(),
       timeEntryId: entry.id,
     })),
@@ -64,6 +65,7 @@ router.get("/dashboard/weekly-hours", async (_req, res): Promise<void> => {
       entry: timeEntriesTable,
       employeeName: employeesTable.name,
       department: employeesTable.department,
+      imageUrl: employeesTable.imageUrl,
     })
     .from(timeEntriesTable)
     .leftJoin(employeesTable, eq(timeEntriesTable.employeeId, employeesTable.id))
@@ -76,15 +78,16 @@ router.get("/dashboard/weekly-hours", async (_req, res): Promise<void> => {
 
   const byEmployee = new Map<
     number,
-    { employeeId: number; employeeName: string; department: string | null; totalMinutes: number; days: Set<string> }
+    { employeeId: number; employeeName: string; department: string | null; imageUrl: string | null; totalMinutes: number; days: Set<string> }
   >();
 
-  for (const { entry, employeeName, department } of entries) {
+  for (const { entry, employeeName, department, imageUrl } of entries) {
     if (!byEmployee.has(entry.employeeId)) {
       byEmployee.set(entry.employeeId, {
         employeeId: entry.employeeId,
         employeeName: employeeName ?? "Unknown",
         department: department ?? null,
+        imageUrl: imageUrl ?? null,
         totalMinutes: 0,
         days: new Set(),
       });
@@ -100,6 +103,7 @@ router.get("/dashboard/weekly-hours", async (_req, res): Promise<void> => {
     employeeId: e.employeeId,
     employeeName: e.employeeName,
     department: e.department,
+    imageUrl: e.imageUrl,
     totalMinutes: e.totalMinutes,
     daysWorked: e.days.size,
   }));
@@ -132,6 +136,7 @@ router.get("/dashboard/out-this-week", async (_req, res): Promise<void> => {
       req: timeOffRequestsTable,
       employeeName: employeesTable.name,
       department: employeesTable.department,
+      imageUrl: employeesTable.imageUrl,
     })
     .from(timeOffRequestsTable)
     .leftJoin(employeesTable, eq(timeOffRequestsTable.employeeId, employeesTable.id))
@@ -144,11 +149,12 @@ router.get("/dashboard/out-this-week", async (_req, res): Promise<void> => {
     );
 
   res.json(
-    rows.map(({ req, employeeName, department }) => ({
+    rows.map(({ req, employeeName, department, imageUrl }) => ({
       requestId: req.id,
       employeeId: req.employeeId,
       employeeName: employeeName ?? "Unknown",
       department: department ?? null,
+      imageUrl: imageUrl ?? null,
       type: req.type,
       startDate: req.startDate,
       endDate: req.endDate,
@@ -167,6 +173,7 @@ router.get("/dashboard/upcoming-events", async (_req, res): Promise<void> => {
     employeeId: number;
     employeeName: string;
     department: string | null;
+    imageUrl: string | null;
     kind: "birthday" | "anniversary";
     label: string;
     date: string;
@@ -190,6 +197,7 @@ router.get("/dashboard/upcoming-events", async (_req, res): Promise<void> => {
           employeeId: emp.id,
           employeeName: emp.name,
           department: emp.department ?? null,
+          imageUrl: emp.imageUrl ?? null,
           kind: "birthday",
           label: "Birthday",
           date: target.toISOString().split("T")[0],
@@ -214,6 +222,7 @@ router.get("/dashboard/upcoming-events", async (_req, res): Promise<void> => {
           employeeId: emp.id,
           employeeName: emp.name,
           department: emp.department ?? null,
+          imageUrl: emp.imageUrl ?? null,
           kind: "anniversary",
           label: yearsOfService === 1 ? "1-Year Work Anniversary" : `${yearsOfService}-Year Work Anniversary`,
           date: target.toISOString().split("T")[0],

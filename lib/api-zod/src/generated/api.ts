@@ -21,6 +21,7 @@ export const GetMeResponse = zod.object({
   "timeOffAllotmentHours": zod.number().nullish(),
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -47,6 +48,7 @@ export const ListEmployeesResponseItem = zod.object({
   "timeOffAllotmentHours": zod.number().nullish(),
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -87,6 +89,7 @@ export const GetEmployeeResponse = zod.object({
   "timeOffAllotmentHours": zod.number().nullish(),
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -122,6 +125,7 @@ export const UpdateEmployeeResponse = zod.object({
   "timeOffAllotmentHours": zod.number().nullish(),
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -340,6 +344,7 @@ export const GetDashboardStatusResponse = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "clockIn": zod.string(),
   "timeEntryId": zod.number()
 }))
@@ -353,6 +358,7 @@ export const GetWeeklyHoursResponseItem = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "totalMinutes": zod.number(),
   "daysWorked": zod.number()
 })
@@ -375,6 +381,7 @@ export const GetOutThisWeekResponseItem = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "type": zod.enum(['vacation', 'pto', 'sick', 'bereavement', 'personal', 'other']),
   "startDate": zod.string(),
   "endDate": zod.string()
@@ -389,6 +396,7 @@ export const GetUpcomingEventsResponseItem = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "kind": zod.enum(['birthday', 'anniversary']),
   "label": zod.string(),
   "date": zod.string(),
@@ -410,6 +418,7 @@ export const GetTimeOffBalancesResponseItem = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "allottedHours": zod.number(),
   "usedHours": zod.number(),
   "plannedHours": zod.number(),
@@ -449,6 +458,7 @@ export const GetTimesheetReportResponseItem = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
   "totalMinutes": zod.number(),
   "totalTimeOffMinutes": zod.number(),
   "entries": zod.array(zod.object({
