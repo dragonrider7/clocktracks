@@ -13,6 +13,7 @@ import Clock from "@/pages/clock";
 import Employees from "@/pages/employees";
 import TimeEntries from "@/pages/time-entries";
 import TimeOff from "@/pages/time-off";
+import Reports from "@/pages/reports";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { Employee } from "@workspace/api-client-react";
 
@@ -284,6 +285,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/employees" component={() => <ProtectedRoute component={Employees} />} />
             <Route path="/time-entries" component={() => <ProtectedRoute component={TimeEntries} />} />
             <Route path="/time-off" component={() => <ProtectedRoute component={TimeOff} />} />
+            <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />

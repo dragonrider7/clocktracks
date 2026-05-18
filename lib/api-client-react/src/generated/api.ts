@@ -25,11 +25,14 @@ import type {
   DashboardStatus,
   Employee,
   EmployeeInput,
+  EmployeeTimesheet,
   EmployeeUpdate,
   EmployeeWeeklyHours,
+  GetTimesheetReportParams,
   HealthStatus,
   ListTimeEntriesParams,
   ListTimeOffRequestsParams,
+  OutThisWeekEntry,
   PendingRequestsCount,
   TimeEntry,
   TimeEntryUpdate,
@@ -1534,6 +1537,167 @@ export function useGetPendingRequests<TData = Awaited<ReturnType<typeof getPendi
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPendingRequestsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetOutThisWeekUrl = () => {
+
+
+
+
+  return `/api/dashboard/out-this-week`
+}
+
+/**
+ * @summary Get employees on approved time off this week
+ */
+export const getOutThisWeek = async ( options?: RequestInit): Promise<OutThisWeekEntry[]> => {
+
+  return customFetch<OutThisWeekEntry[]>(getGetOutThisWeekUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOutThisWeekQueryKey = () => {
+    return [
+    `/api/dashboard/out-this-week`
+    ] as const;
+    }
+
+
+export const getGetOutThisWeekQueryOptions = <TData = Awaited<ReturnType<typeof getOutThisWeek>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOutThisWeek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOutThisWeekQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOutThisWeek>>> = ({ signal }) => getOutThisWeek({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOutThisWeek>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOutThisWeekQueryResult = NonNullable<Awaited<ReturnType<typeof getOutThisWeek>>>
+export type GetOutThisWeekQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get employees on approved time off this week
+ */
+
+export function useGetOutThisWeek<TData = Awaited<ReturnType<typeof getOutThisWeek>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOutThisWeek>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOutThisWeekQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetTimesheetReportUrl = (params: GetTimesheetReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/timesheets?${stringifiedParams}` : `/api/reports/timesheets`
+}
+
+/**
+ * @summary Get timesheet report for a date range (admin)
+ */
+export const getTimesheetReport = async (params: GetTimesheetReportParams, options?: RequestInit): Promise<EmployeeTimesheet[]> => {
+
+  return customFetch<EmployeeTimesheet[]>(getGetTimesheetReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTimesheetReportQueryKey = (params?: GetTimesheetReportParams,) => {
+    return [
+    `/api/reports/timesheets`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTimesheetReportQueryOptions = <TData = Awaited<ReturnType<typeof getTimesheetReport>>, TError = ErrorType<unknown>>(params: GetTimesheetReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTimesheetReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTimesheetReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTimesheetReport>>> = ({ signal }) => getTimesheetReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTimesheetReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTimesheetReportQueryResult = NonNullable<Awaited<ReturnType<typeof getTimesheetReport>>>
+export type GetTimesheetReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get timesheet report for a date range (admin)
+ */
+
+export function useGetTimesheetReport<TData = Awaited<ReturnType<typeof getTimesheetReport>>, TError = ErrorType<unknown>>(
+ params: GetTimesheetReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTimesheetReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTimesheetReportQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

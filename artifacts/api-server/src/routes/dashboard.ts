@@ -113,4 +113,47 @@ router.get("/dashboard/pending-requests", async (_req, res): Promise<void> => {
   res.json({ count: requests.length });
 });
 
+router.get("/dashboard/out-this-week", async (_req, res): Promise<void> => {
+  const { timeOffRequestsTable } = await import("@workspace/db");
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  const mondayStr = monday.toISOString().split("T")[0];
+  const sundayStr = sunday.toISOString().split("T")[0];
+
+  const rows = await db
+    .select({
+      req: timeOffRequestsTable,
+      employeeName: employeesTable.name,
+      department: employeesTable.department,
+    })
+    .from(timeOffRequestsTable)
+    .leftJoin(employeesTable, eq(timeOffRequestsTable.employeeId, employeesTable.id))
+    .where(
+      and(
+        eq(timeOffRequestsTable.status, "approved"),
+        lte(timeOffRequestsTable.startDate, sundayStr),
+        gte(timeOffRequestsTable.endDate, mondayStr),
+      ),
+    );
+
+  res.json(
+    rows.map(({ req, employeeName, department }) => ({
+      requestId: req.id,
+      employeeId: req.employeeId,
+      employeeName: employeeName ?? "Unknown",
+      department: department ?? null,
+      type: req.type,
+      startDate: req.startDate,
+      endDate: req.endDate,
+    })),
+  );
+});
+
 export default router;

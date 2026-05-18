@@ -194,6 +194,36 @@ export interface PendingRequestsCount {
   count: number;
 }
 
+export type OutThisWeekEntryType = typeof OutThisWeekEntryType[keyof typeof OutThisWeekEntryType];
+
+
+export const OutThisWeekEntryType = {
+  vacation: 'vacation',
+  sick: 'sick',
+  personal: 'personal',
+  other: 'other',
+} as const;
+
+export interface OutThisWeekEntry {
+  requestId: number;
+  employeeId: number;
+  employeeName: string;
+  /** @nullable */
+  department?: string | null;
+  type: OutThisWeekEntryType;
+  startDate: string;
+  endDate: string;
+}
+
+export interface EmployeeTimesheet {
+  employeeId: number;
+  employeeName: string;
+  /** @nullable */
+  department?: string | null;
+  totalMinutes: number;
+  entries: TimeEntry[];
+}
+
 export type ListTimeEntriesParams = {
 employeeId?: number;
 startDate?: string;
@@ -213,4 +243,10 @@ export const ListTimeOffRequestsStatus = {
   approved: 'approved',
   denied: 'denied',
 } as const;
+
+export type GetTimesheetReportParams = {
+startDate: string;
+endDate: string;
+employeeId?: number;
+};
 

@@ -20,6 +20,8 @@ tags:
     description: Vacation and time off requests
   - name: dashboard
     description: Dashboard and summary endpoints
+  - name: reports
+    description: Admin reporting and timesheet exports
 
 paths:
   /me:
@@ -421,6 +423,52 @@ paths:
               schema:
                 $ref: "#/components/schemas/PendingRequestsCount"
 
+  /dashboard/out-this-week:
+    get:
+      operationId: getOutThisWeek
+      tags: [dashboard]
+      summary: Get employees on approved time off this week
+      responses:
+        "200":
+          description: Employees out this week
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutThisWeekEntry"
+
+  /reports/timesheets:
+    get:
+      operationId: getTimesheetReport
+      tags: [reports]
+      summary: Get timesheet report for a date range (admin)
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: employeeId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Timesheet report grouped by employee
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeTimesheet"
+
 components:
   schemas:
     HealthStatus:
@@ -640,3 +688,40 @@ components:
       properties:
         count:
           type: integer
+
+    OutThisWeekEntry:
+      type: object
+      required: [requestId, employeeId, employeeName, type, startDate, endDate]
+      properties:
+        requestId:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        department:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [vacation, sick, personal, other]
+        startDate:
+          type: string
+        endDate:
+          type: string
+
+    EmployeeTimesheet:
+      type: object
+      required: [employeeId, employeeName, totalMinutes, entries]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        department:
+          type: ["string", "null"]
+        totalMinutes:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeEntry"

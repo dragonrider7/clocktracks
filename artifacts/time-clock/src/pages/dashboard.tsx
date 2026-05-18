@@ -1,12 +1,31 @@
-import { useGetDashboardStatus, useGetWeeklyHours, useGetPendingRequests } from "@workspace/api-client-react";
+import {
+  useGetDashboardStatus,
+  useGetWeeklyHours,
+  useGetPendingRequests,
+  useGetOutThisWeek,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Clock, CalendarIcon, Activity } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, Clock, CalendarIcon, Activity, Umbrella } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const typeColors: Record<string, string> = {
+  vacation: "bg-blue-100 text-blue-700",
+  sick: "bg-red-100 text-red-700",
+  personal: "bg-purple-100 text-purple-700",
+  other: "bg-gray-100 text-gray-700",
+};
+
+function fmtDateShort(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString([], { month: "short", day: "numeric" });
+}
 
 export default function Dashboard() {
   const { data: status, isLoading: statusLoading } = useGetDashboardStatus();
   const { data: weeklyHours, isLoading: hoursLoading } = useGetWeeklyHours();
   const { data: pendingRequests, isLoading: pendingLoading } = useGetPendingRequests();
+  const { data: outThisWeek, isLoading: outLoading } = useGetOutThisWeek();
 
   return (
     <div className="grid gap-4 md:gap-8">
@@ -49,12 +68,14 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Out This Week</CardTitle>
+            <Umbrella className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">Online</div>
-            <p className="text-xs text-muted-foreground mt-1">All systems operational</p>
+            {outLoading ? <Skeleton className="h-8 w-20" /> : (
+              <div className="text-2xl font-bold">{outThisWeek?.length || 0}</div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">Employees on approved time off</p>
           </CardContent>
         </Card>
       </div>
@@ -120,6 +141,42 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Out This Week</CardTitle>
+          <CardDescription>Employees on approved time off this week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {outLoading ? <Skeleton className="h-24 w-full" /> : (
+            outThisWeek?.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground text-sm">No one is on approved time off this week.</div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {outThisWeek?.map((item) => (
+                  <div key={item.requestId} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/20">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                      {item.employeeName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.employeeName}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <Badge className={`text-xs px-1.5 py-0 ${typeColors[item.type] ?? typeColors.other}`}>
+                          {item.type}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {fmtDateShort(item.startDate)}
+                          {item.startDate !== item.endDate && ` – ${fmtDateShort(item.endDate)}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

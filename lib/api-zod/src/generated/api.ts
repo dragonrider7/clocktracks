@@ -338,3 +338,46 @@ export const GetPendingRequestsResponse = zod.object({
 })
 
 
+/**
+ * @summary Get employees on approved time off this week
+ */
+export const GetOutThisWeekResponseItem = zod.object({
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "department": zod.string().nullish(),
+  "type": zod.enum(['vacation', 'sick', 'personal', 'other']),
+  "startDate": zod.string(),
+  "endDate": zod.string()
+})
+export const GetOutThisWeekResponse = zod.array(GetOutThisWeekResponseItem)
+
+
+/**
+ * @summary Get timesheet report for a date range (admin)
+ */
+export const GetTimesheetReportQueryParams = zod.object({
+  "startDate": zod.coerce.string(),
+  "endDate": zod.coerce.string(),
+  "employeeId": zod.coerce.number().optional()
+})
+
+export const GetTimesheetReportResponseItem = zod.object({
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "department": zod.string().nullish(),
+  "totalMinutes": zod.number(),
+  "entries": zod.array(zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "clockIn": zod.string(),
+  "clockOut": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "totalMinutes": zod.number().nullish(),
+  "createdAt": zod.string()
+}))
+})
+export const GetTimesheetReportResponse = zod.array(GetTimesheetReportResponseItem)
+
+

@@ -5,6 +5,7 @@ import employeesRouter from "./employees";
 import timeEntriesRouter from "./timeEntries";
 import timeOffRequestsRouter from "./timeOffRequests";
 import dashboardRouter from "./dashboard";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(employeesRouter);
 router.use(timeEntriesRouter);
 router.use(timeOffRequestsRouter);
 router.use(dashboardRouter);
+router.use(reportsRouter);
 
 export default router;

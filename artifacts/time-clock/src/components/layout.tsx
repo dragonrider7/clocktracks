@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown } from "lucide-react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart } from "lucide-react";
 import { useClerk } from "@clerk/react";
 import { useMe } from "@/App";
 import {
@@ -23,6 +23,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/employees", label: "Employees", icon: Users, adminOnly: true },
     { href: "/time-entries", label: "Time Log", icon: Table2, adminOnly: false },
     { href: "/time-off", label: "Time Off", icon: Calendar, adminOnly: false },
+    { href: "/reports", label: "Reports", icon: FileBarChart, adminOnly: true },
   ].filter((item) => !item.adminOnly || isAdmin);
 
   const initials = me?.name
