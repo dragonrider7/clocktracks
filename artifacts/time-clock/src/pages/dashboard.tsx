@@ -7,9 +7,10 @@ import {
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star } from "lucide-react";
+import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star, ArrowRight, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeAvatar } from "@/components/employee-avatar";
+import { useLocation } from "wouter";
 
 const TYPE_COLORS: Record<string, string> = {
   vacation: "bg-blue-100 text-blue-700",
@@ -30,11 +31,15 @@ interface StatCardProps {
   icon: React.ReactNode;
   accentClass: string;
   isLoading?: boolean;
+  onClick?: () => void;
 }
 
-function StatCard({ title, value, subtitle, icon, accentClass, isLoading }: StatCardProps) {
+function StatCard({ title, value, subtitle, icon, accentClass, isLoading, onClick }: StatCardProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card
+      className={`overflow-hidden transition-shadow ${onClick ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" : ""}`}
+      onClick={onClick}
+    >
       <div className={`h-1 w-full ${accentClass}`} />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -46,7 +51,10 @@ function StatCard({ title, value, subtitle, icon, accentClass, isLoading }: Stat
         {isLoading ? (
           <Skeleton className="h-8 w-20" />
         ) : (
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold">{value}</div>
+            {onClick && <ChevronRight className="h-4 w-4 text-muted-foreground/50 mb-1" />}
+          </div>
         )}
         <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
       </CardContent>
@@ -54,7 +62,19 @@ function StatCard({ title, value, subtitle, icon, accentClass, isLoading }: Stat
   );
 }
 
+function ViewAllLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+    >
+      View all <ArrowRight className="h-3 w-3" />
+    </button>
+  );
+}
+
 export default function Dashboard() {
+  const [, setLocation] = useLocation();
   const { data: status, isLoading: statusLoading } = useGetDashboardStatus();
   const { data: weeklyHours, isLoading: hoursLoading } = useGetWeeklyHours();
   const { data: pendingRequests, isLoading: pendingLoading } = useGetPendingRequests();
@@ -71,6 +91,7 @@ export default function Dashboard() {
           icon={<Users className="h-4 w-4" />}
           accentClass="bg-blue-500"
           isLoading={statusLoading}
+          onClick={() => setLocation("/time-entries")}
         />
         <StatCard
           title="Today's Hours"
@@ -79,6 +100,7 @@ export default function Dashboard() {
           icon={<Clock className="h-4 w-4" />}
           accentClass="bg-emerald-500"
           isLoading={statusLoading}
+          onClick={() => setLocation("/time-entries")}
         />
         <StatCard
           title="Pending Time Off"
@@ -87,6 +109,7 @@ export default function Dashboard() {
           icon={<CalendarIcon className="h-4 w-4" />}
           accentClass="bg-amber-500"
           isLoading={pendingLoading}
+          onClick={() => setLocation("/time-off")}
         />
         <StatCard
           title="Out This Week"
@@ -95,6 +118,7 @@ export default function Dashboard() {
           icon={<Umbrella className="h-4 w-4" />}
           accentClass="bg-violet-500"
           isLoading={outLoading}
+          onClick={() => setLocation("/time-off")}
         />
       </div>
 
@@ -104,6 +128,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
               <CardTitle>Currently Clocked In</CardTitle>
+              <ViewAllLink onClick={() => setLocation("/time-entries")} />
             </div>
             <CardDescription>Real-time view of active team members</CardDescription>
           </CardHeader>
@@ -115,11 +140,12 @@ export default function Dashboard() {
                 No one is currently clocked in.
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {status?.clockedInEmployees?.map((emp) => (
-                  <div
+                  <button
                     key={emp.employeeId}
-                    className="flex items-center justify-between rounded-xl bg-muted/30 px-4 py-3"
+                    onClick={() => setLocation("/time-entries")}
+                    className="w-full flex items-center justify-between rounded-xl bg-muted/30 px-4 py-3 hover:bg-muted/60 transition-colors group text-left"
                   >
                     <div className="flex items-center gap-3">
                       <EmployeeAvatar name={emp.employeeName} size="md" />
@@ -133,8 +159,9 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground font-medium">
                         Since {new Date(emp.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -146,6 +173,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
               <CardTitle>This Week's Hours</CardTitle>
+              <ViewAllLink onClick={() => setLocation("/time-entries")} />
             </div>
             <CardDescription>Total hours worked this week</CardDescription>
           </CardHeader>
@@ -160,13 +188,20 @@ export default function Dashboard() {
                   const hrs = emp.totalMinutes / 60;
                   const pct = Math.min(100, (hrs / 40) * 100);
                   return (
-                    <div key={emp.employeeId} className="space-y-1">
+                    <button
+                      key={emp.employeeId}
+                      onClick={() => setLocation("/time-entries")}
+                      className="w-full space-y-1 group text-left hover:opacity-80 transition-opacity"
+                    >
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           <EmployeeAvatar name={emp.employeeName} size="xs" />
                           <span className="font-medium">{emp.employeeName}</span>
                         </div>
-                        <span className="font-semibold text-emerald-700">{hrs.toFixed(1)} hrs</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-emerald-700">{hrs.toFixed(1)} hrs</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                         <div
@@ -174,7 +209,7 @@ export default function Dashboard() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -189,6 +224,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <Umbrella className="h-4 w-4 text-violet-500" />
               <CardTitle>Out This Week</CardTitle>
+              <ViewAllLink onClick={() => setLocation("/time-off")} />
             </div>
             <CardDescription>Employees on approved time off this week</CardDescription>
           </CardHeader>
@@ -200,14 +236,15 @@ export default function Dashboard() {
                 No one is on approved time off this week.
               </div>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-2">
                 {outThisWeek?.map((item) => (
-                  <div
+                  <button
                     key={item.requestId}
-                    className="flex items-center gap-3 p-3 rounded-xl border bg-violet-50 border-violet-100"
+                    onClick={() => setLocation("/time-off")}
+                    className="flex items-center gap-3 p-3 rounded-xl border bg-violet-50 border-violet-100 hover:bg-violet-100/70 transition-colors group text-left"
                   >
                     <EmployeeAvatar name={item.employeeName} size="md" />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold truncate">{item.employeeName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <Badge className={`text-xs px-1.5 py-0 ${TYPE_COLORS[item.type] ?? TYPE_COLORS.other}`}>
@@ -219,7 +256,8 @@ export default function Dashboard() {
                         </span>
                       </div>
                     </div>
-                  </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </button>
                 ))}
               </div>
             )}
