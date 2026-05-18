@@ -5,9 +5,10 @@ import {
   useReviewTimeOffRequest,
   useListEmployees,
   useGetTimeOffBalances,
+  useListHolidays,
   getListTimeOffRequestsQueryKey,
 } from "@workspace/api-client-react";
-import type { TimeOffRequest } from "@workspace/api-client-react";
+import type { TimeOffRequest, Holiday } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight, Gift } from "lucide-react";
 import { useMe } from "@/App";
 
 type TimeOffType = "vacation" | "pto" | "sick" | "bereavement" | "personal" | "other";
@@ -51,10 +52,45 @@ function requestsOnDay(dateStr: string, requests: TimeOffRequest[]): TimeOffRequ
   return requests.filter((r) => r.startDate <= dateStr && r.endDate >= dateStr);
 }
 
+function computeHolidayDate(h: Holiday, year: number): string | null {
+  if (h.recurrenceType === "none") return h.date ?? null;
+  if (h.recurrenceType === "fixed") {
+    const m = h.recurrenceMonth!;
+    const d = h.recurrenceDayOfMonth!;
+    return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  if (h.recurrenceType === "nth_weekday") {
+    const month = h.recurrenceMonth!;
+    const targetWd = h.recurrenceWeekday!;
+    const nth = h.recurrenceNth!;
+    if (nth === -1) {
+      const lastDay = new Date(year, month, 0).getDate();
+      for (let d = lastDay; d >= 1; d--) {
+        if (new Date(year, month - 1, d).getDay() === targetWd) {
+          return `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        }
+      }
+    } else {
+      let count = 0;
+      for (let d = 1; d <= 31; d++) {
+        const dt = new Date(year, month - 1, d);
+        if (dt.getMonth() !== month - 1) break;
+        if (dt.getDay() === targetWd) {
+          count++;
+          if (count === nth) {
+            return `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAY_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
+function CalendarView({ requests, holidays }: { requests: TimeOffRequest[]; holidays: Holiday[] }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -64,6 +100,17 @@ function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
   const firstOffset = firstDay.getDay();
   const rows = Math.ceil((firstOffset + lastDay.getDate()) / 7);
   const todayStr = toDateStr(today);
+
+  // Pre-compute holiday dates for this month
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
+  const holidaysByDate = new Map<string, Holiday[]>();
+  for (const h of holidays) {
+    const d = computeHolidayDate(h, year);
+    if (d && d.startsWith(monthPrefix)) {
+      if (!holidaysByDate.has(d)) holidaysByDate.set(d, []);
+      holidaysByDate.get(d)!.push(h);
+    }
+  }
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -85,27 +132,43 @@ function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
           if (!isValid) return <div key={i} className="bg-background min-h-[72px]" />;
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
           const dayRequests = requestsOnDay(dateStr, requests);
+          const dayHolidays = holidaysByDate.get(dateStr) ?? [];
           const isToday = dateStr === todayStr;
+          const isHoliday = dayHolidays.length > 0;
           return (
-            <div key={i} className={`bg-background min-h-[72px] p-1.5 ${isToday ? "ring-2 ring-inset ring-primary/40" : ""}`}>
+            <div key={i} className={`bg-background min-h-[72px] p-1.5 ${isToday ? "ring-2 ring-inset ring-primary/40" : ""} ${isHoliday ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}`}>
               <span className={`text-xs font-medium inline-flex h-5 w-5 items-center justify-center rounded-full ${isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
                 {dayNum}
               </span>
               <div className="mt-0.5 space-y-0.5">
-                {dayRequests.slice(0, 3).map((req) => (
+                {dayHolidays.map((h) => (
+                  <div key={`h-${h.id}`} title={h.name}
+                    className="flex items-center gap-1 rounded text-[10px] leading-tight px-1 py-0.5 border truncate bg-amber-100 text-amber-800 border-amber-300">
+                    <Gift className="h-2 w-2 shrink-0" />
+                    <span className="truncate font-medium">{h.name}</span>
+                  </div>
+                ))}
+                {dayRequests.slice(0, 3 - dayHolidays.length).map((req) => (
                   <div key={req.id} title={`${req.employeeName ?? "Employee"} — ${TYPE_LABELS[req.type] ?? req.type} (${req.status})`}
                     className={`flex items-center gap-1 rounded text-[10px] leading-tight px-1 py-0.5 border truncate ${TYPE_COLORS[req.type] ?? TYPE_COLORS.other}`}>
                     <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[req.status] ?? "bg-gray-400"}`} />
                     <span className="truncate">{req.employeeName?.split(" ")[0] ?? "?"}</span>
                   </div>
                 ))}
-                {dayRequests.length > 3 && <div className="text-[10px] text-muted-foreground px-1">+{dayRequests.length - 3} more</div>}
+                {(dayRequests.length + dayHolidays.length) > 3 && (
+                  <div className="text-[10px] text-muted-foreground px-1">
+                    +{dayRequests.length + dayHolidays.length - 3} more
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
       <div className="flex flex-wrap gap-2 pt-1">
+        <span className="text-xs px-2 py-0.5 rounded border bg-amber-100 text-amber-800 border-amber-300 flex items-center gap-1">
+          <Gift className="h-3 w-3" /> Holiday
+        </span>
         {Object.entries(TYPE_COLORS).map(([type, cls]) => (
           <span key={type} className={`text-xs px-2 py-0.5 rounded border ${cls}`}>{TYPE_LABELS[type] ?? type}</span>
         ))}
@@ -186,6 +249,7 @@ function TypeBadge({ type }: { type: string }) {
 export default function TimeOff() {
   const { data: requests, isLoading } = useListTimeOffRequests();
   const { data: employees } = useListEmployees();
+  const { data: holidays = [] } = useListHolidays();
   const reviewMutation = useReviewTimeOffRequest();
   const createMutation = useCreateTimeOffRequest();
   const queryClient = useQueryClient();
@@ -319,7 +383,7 @@ export default function TimeOff() {
         <CardContent>
           {view === "calendar" ? (
             isLoading ? <div className="h-96 flex items-center justify-center text-muted-foreground text-sm">Loading...</div>
-              : <CalendarView requests={calendarRequests} />
+              : <CalendarView requests={calendarRequests} holidays={holidays} />
           ) : (
             <Table>
               <TableHeader>

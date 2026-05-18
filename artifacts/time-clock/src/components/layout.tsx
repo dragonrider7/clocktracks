@@ -108,7 +108,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 onClick={() => setLocation("/profile")}
                 className="cursor-pointer gap-2"
               >
-                <UserCircle className="h-4 w-4" />
+                {user?.imageUrl ? (
+                  <img
+                    src={user.imageUrl}
+                    alt=""
+                    className="h-4 w-4 rounded-full object-cover"
+                  />
+                ) : (
+                  <UserCircle className="h-4 w-4" />
+                )}
                 My Profile
               </DropdownMenuItem>
               <DropdownMenuSub>
