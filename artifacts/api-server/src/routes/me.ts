@@ -24,7 +24,7 @@ router.get("/me", async (req, res): Promise<void> => {
   if (!employee) {
     // Try to find by email using Clerk user data
     try {
-      const clerkUser = await clerkClient().users.getUser(clerkUserId);
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
       const email = clerkUser.emailAddresses?.[0]?.emailAddress;
 
       if (email) {
