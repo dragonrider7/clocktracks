@@ -1,8 +1,14 @@
 import { Router, type IRouter } from "express";
 import { eq, gte, lte, and } from "drizzle-orm";
-import { db, timeEntriesTable, employeesTable } from "@workspace/db";
+import { db, timeEntriesTable, employeesTable, timeOffRequestsTable } from "@workspace/db";
 
 const router: IRouter = Router();
+
+function calcDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+}
 
 router.get("/reports/timesheets", async (req, res): Promise<void> => {
   const { startDate, endDate, employeeId } = req.query;
@@ -81,6 +87,46 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
   }
 
   res.json(Array.from(byEmployee.values()));
+});
+
+router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
+  const { employeeId } = req.query;
+
+  const [employees, requests] = await Promise.all([
+    db.select().from(employeesTable).orderBy(employeesTable.name),
+    db.select().from(timeOffRequestsTable),
+  ]);
+
+  const filtered = employeeId
+    ? employees.filter((e) => e.id === parseInt(employeeId as string))
+    : employees;
+
+  const result = filtered.map((emp) => {
+    const empReqs = requests.filter((r) => r.employeeId === emp.id);
+
+    const usedHours = empReqs
+      .filter((r) => r.status === "approved")
+      .reduce((sum, r) => sum + calcDays(r.startDate, r.endDate) * 8, 0);
+
+    const plannedHours = empReqs
+      .filter((r) => r.status === "pending")
+      .reduce((sum, r) => sum + calcDays(r.startDate, r.endDate) * 8, 0);
+
+    const allottedHours = emp.timeOffAllotmentHours ?? 80;
+
+    return {
+      employeeId: emp.id,
+      employeeName: emp.name,
+      department: emp.department ?? null,
+      allottedHours,
+      usedHours,
+      plannedHours,
+      remainingHours: Math.max(0, allottedHours - usedHours),
+      usedPlusPlannedHours: usedHours + plannedHours,
+    };
+  });
+
+  res.json(result);
 });
 
 export default router;

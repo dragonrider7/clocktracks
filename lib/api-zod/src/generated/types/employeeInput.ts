@@ -14,4 +14,5 @@ export interface EmployeeInput {
   role: EmployeeInputRole;
   department?: string;
   email?: string;
+  timeOffAllotmentHours?: number;
 }

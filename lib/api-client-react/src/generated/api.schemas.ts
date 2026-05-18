@@ -27,6 +27,8 @@ export interface Employee {
   department: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  timeOffAllotmentHours?: number | null;
   createdAt: string;
 }
 
@@ -45,6 +47,7 @@ export interface EmployeeInput {
   role: EmployeeInputRole;
   department?: string;
   email?: string;
+  timeOffAllotmentHours?: number;
 }
 
 export type EmployeeUpdateRole = typeof EmployeeUpdateRole[keyof typeof EmployeeUpdateRole];
@@ -62,6 +65,7 @@ export interface EmployeeUpdate {
   role?: EmployeeUpdateRole;
   department?: string;
   email?: string;
+  timeOffAllotmentHours?: number;
 }
 
 export interface TimeEntry {
@@ -215,6 +219,18 @@ export interface OutThisWeekEntry {
   endDate: string;
 }
 
+export interface TimeOffBalance {
+  employeeId: number;
+  employeeName: string;
+  /** @nullable */
+  department?: string | null;
+  allottedHours: number;
+  usedHours: number;
+  plannedHours: number;
+  remainingHours: number;
+  usedPlusPlannedHours: number;
+}
+
 export interface EmployeeTimesheet {
   employeeId: number;
   employeeName: string;
@@ -243,6 +259,10 @@ export const ListTimeOffRequestsStatus = {
   approved: 'approved',
   denied: 'denied',
 } as const;
+
+export type GetTimeOffBalancesParams = {
+employeeId?: number;
+};
 
 export type GetTimesheetReportParams = {
 startDate: string;

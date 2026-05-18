@@ -438,6 +438,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/OutThisWeekEntry"
 
+  /reports/time-off-balances:
+    get:
+      operationId: getTimeOffBalances
+      tags: [reports]
+      summary: Get time off balance for all employees (admin)
+      parameters:
+        - name: employeeId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Time off balances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeOffBalance"
+
   /reports/timesheets:
     get:
       operationId: getTimesheetReport
@@ -496,6 +517,8 @@ components:
           type: ["string", "null"]
         email:
           type: ["string", "null"]
+        timeOffAllotmentHours:
+          type: ["integer", "null"]
         createdAt:
           type: string
 
@@ -515,6 +538,8 @@ components:
           type: string
         email:
           type: string
+        timeOffAllotmentHours:
+          type: integer
 
     EmployeeUpdate:
       type: object
@@ -531,6 +556,8 @@ components:
           type: string
         email:
           type: string
+        timeOffAllotmentHours:
+          type: integer
 
     TimeEntry:
       type: object
@@ -708,6 +735,27 @@ components:
           type: string
         endDate:
           type: string
+
+    TimeOffBalance:
+      type: object
+      required: [employeeId, employeeName, allottedHours, usedHours, plannedHours, remainingHours, usedPlusPlannedHours]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        department:
+          type: ["string", "null"]
+        allottedHours:
+          type: integer
+        usedHours:
+          type: number
+        plannedHours:
+          type: number
+        remainingHours:
+          type: number
+        usedPlusPlannedHours:
+          type: number
 
     EmployeeTimesheet:
       type: object

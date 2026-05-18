@@ -28,6 +28,7 @@ import type {
   EmployeeTimesheet,
   EmployeeUpdate,
   EmployeeWeeklyHours,
+  GetTimeOffBalancesParams,
   GetTimesheetReportParams,
   HealthStatus,
   ListTimeEntriesParams,
@@ -36,6 +37,7 @@ import type {
   PendingRequestsCount,
   TimeEntry,
   TimeEntryUpdate,
+  TimeOffBalance,
   TimeOffRequest,
   TimeOffRequestInput,
   TimeOffReview
@@ -1614,6 +1616,90 @@ export function useGetOutThisWeek<TData = Awaited<ReturnType<typeof getOutThisWe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetOutThisWeekQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetTimeOffBalancesUrl = (params?: GetTimeOffBalancesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/time-off-balances?${stringifiedParams}` : `/api/reports/time-off-balances`
+}
+
+/**
+ * @summary Get time off balance for all employees (admin)
+ */
+export const getTimeOffBalances = async (params?: GetTimeOffBalancesParams, options?: RequestInit): Promise<TimeOffBalance[]> => {
+
+  return customFetch<TimeOffBalance[]>(getGetTimeOffBalancesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTimeOffBalancesQueryKey = (params?: GetTimeOffBalancesParams,) => {
+    return [
+    `/api/reports/time-off-balances`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetTimeOffBalancesQueryOptions = <TData = Awaited<ReturnType<typeof getTimeOffBalances>>, TError = ErrorType<unknown>>(params?: GetTimeOffBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTimeOffBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTimeOffBalancesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTimeOffBalances>>> = ({ signal }) => getTimeOffBalances(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTimeOffBalances>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTimeOffBalancesQueryResult = NonNullable<Awaited<ReturnType<typeof getTimeOffBalances>>>
+export type GetTimeOffBalancesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get time off balance for all employees (admin)
+ */
+
+export function useGetTimeOffBalances<TData = Awaited<ReturnType<typeof getTimeOffBalances>>, TError = ErrorType<unknown>>(
+ params?: GetTimeOffBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTimeOffBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTimeOffBalancesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
