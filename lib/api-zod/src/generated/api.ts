@@ -423,3 +423,62 @@ export const GetTimesheetReportResponseItem = zod.object({
 export const GetTimesheetReportResponse = zod.array(GetTimesheetReportResponseItem)
 
 
+/**
+ * @summary List all holidays
+ */
+export const ListHolidaysResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "date": zod.string(),
+  "hoursPerDay": zod.number(),
+  "createdAt": zod.string()
+})
+export const ListHolidaysResponse = zod.array(ListHolidaysResponseItem)
+
+
+/**
+ * @summary Create a holiday (admin)
+ */
+
+
+
+export const CreateHolidayBody = zod.object({
+  "name": zod.string().min(1),
+  "date": zod.string(),
+  "hoursPerDay": zod.number().optional()
+})
+
+
+/**
+ * @summary Update a holiday (admin)
+ */
+export const UpdateHolidayParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateHolidayBody = zod.object({
+  "name": zod.string().min(1),
+  "date": zod.string(),
+  "hoursPerDay": zod.number().optional()
+})
+
+export const UpdateHolidayResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "date": zod.string(),
+  "hoursPerDay": zod.number(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a holiday (admin)
+ */
+export const DeleteHolidayParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

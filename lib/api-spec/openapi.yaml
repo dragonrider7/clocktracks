@@ -509,6 +509,80 @@ paths:
                 items:
                   $ref: "#/components/schemas/EmployeeTimesheet"
 
+  /holidays:
+    get:
+      operationId: listHolidays
+      tags: [holidays]
+      summary: List all holidays
+      responses:
+        "200":
+          description: List of holidays
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Holiday"
+    post:
+      operationId: createHoliday
+      tags: [holidays]
+      summary: Create a holiday (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HolidayInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Holiday"
+
+  /holidays/{id}:
+    patch:
+      operationId: updateHoliday
+      tags: [holidays]
+      summary: Update a holiday (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HolidayInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Holiday"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteHoliday
+      tags: [holidays]
+      summary: Delete a holiday (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -623,6 +697,33 @@ components:
           type: string
         notes:
           type: string
+
+    Holiday:
+      type: object
+      required: [id, name, date, hoursPerDay, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        date:
+          type: string
+        hoursPerDay:
+          type: integer
+        createdAt:
+          type: string
+
+    HolidayInput:
+      type: object
+      required: [name, date]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        date:
+          type: string
+        hoursPerDay:
+          type: integer
 
     ManualTimeEntryInput:
       type: object

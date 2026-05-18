@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle } from "lucide-react";
-import { useClerk, useUser, UserProfile } from "@clerk/react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift } from "lucide-react";
+import { useClerk, useUser } from "@clerk/react";
 import { useMe } from "@/App";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +13,10 @@ import {
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { signOut } = useClerk();
   const { user } = useUser();
   const { me, isAdmin } = useMe();
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
@@ -27,6 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/employees", label: "Employees", icon: Users, adminOnly: true },
     { href: "/time-entries", label: "Time Log", icon: Table2, adminOnly: false },
     { href: "/time-off", label: "Time Off", icon: Calendar, adminOnly: false },
+    { href: "/holidays", label: "Holidays", icon: Gift, adminOnly: true },
     { href: "/reports", label: "Reports", icon: FileBarChart, adminOnly: true },
   ].filter((item) => !item.adminOnly || isAdmin);
 
@@ -97,7 +95,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => setProfileOpen(true)}
+                onClick={() => setLocation("/profile")}
                 className="cursor-pointer gap-2"
               >
                 <UserCircle className="h-4 w-4" />
@@ -119,12 +117,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 lg:p-8">
         {children}
       </main>
-
-      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden [&>button]:text-white [&>button]:bg-primary/80 [&>button]:rounded-full [&>button]:top-3 [&>button]:right-3">
-          <UserProfile routing="hash" />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

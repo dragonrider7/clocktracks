@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, gte, lte, and, or } from "drizzle-orm";
-import { db, timeEntriesTable, employeesTable, timeOffRequestsTable } from "@workspace/db";
+import { db, timeEntriesTable, employeesTable, timeOffRequestsTable, holidaysTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -28,6 +28,8 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
   end.setHours(23, 59, 59, 999);
 
   const empIdFilter = employeeId ? parseInt(employeeId as string) : null;
+  const reportStartStr = dateStr(start);
+  const reportEndStr = dateStr(end);
 
   const entryConditions: ReturnType<typeof eq>[] = [
     gte(timeEntriesTable.clockIn, start) as ReturnType<typeof eq>,
@@ -37,14 +39,16 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
     entryConditions.push(eq(timeEntriesTable.employeeId, empIdFilter) as ReturnType<typeof eq>);
   }
 
-  const [rows, employees, allTimeOff] = await Promise.all([
+  const [rows, allEmployees, allTimeOff, holidays] = await Promise.all([
     db
       .select({ entry: timeEntriesTable, employeeName: employeesTable.name, department: employeesTable.department })
       .from(timeEntriesTable)
       .leftJoin(employeesTable, eq(timeEntriesTable.employeeId, employeesTable.id))
       .where(and(...entryConditions))
       .orderBy(timeEntriesTable.clockIn),
-    db.select().from(employeesTable).orderBy(employeesTable.name),
+    empIdFilter
+      ? db.select().from(employeesTable).where(eq(employeesTable.id, empIdFilter))
+      : db.select().from(employeesTable).orderBy(employeesTable.name),
     db
       .select({ req: timeOffRequestsTable, employeeName: employeesTable.name, department: employeesTable.department })
       .from(timeOffRequestsTable)
@@ -54,20 +58,30 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
           eq(timeOffRequestsTable.status, "approved"),
           or(
             and(
-              gte(timeOffRequestsTable.startDate, dateStr(start)),
-              lte(timeOffRequestsTable.startDate, dateStr(end))
+              gte(timeOffRequestsTable.startDate, reportStartStr),
+              lte(timeOffRequestsTable.startDate, reportEndStr)
             ) as ReturnType<typeof eq>,
             and(
-              gte(timeOffRequestsTable.endDate, dateStr(start)),
-              lte(timeOffRequestsTable.endDate, dateStr(end))
+              gte(timeOffRequestsTable.endDate, reportStartStr),
+              lte(timeOffRequestsTable.endDate, reportEndStr)
             ) as ReturnType<typeof eq>,
             and(
-              lte(timeOffRequestsTable.startDate, dateStr(start)),
-              gte(timeOffRequestsTable.endDate, dateStr(end))
+              lte(timeOffRequestsTable.startDate, reportStartStr),
+              gte(timeOffRequestsTable.endDate, reportEndStr)
             ) as ReturnType<typeof eq>
           ) as ReturnType<typeof eq>
         )
       ),
+    db
+      .select()
+      .from(holidaysTable)
+      .where(
+        and(
+          gte(holidaysTable.date, reportStartStr),
+          lte(holidaysTable.date, reportEndStr)
+        )
+      )
+      .orderBy(holidaysTable.date),
   ]);
 
   type TimesheetEntry = {
@@ -96,26 +110,33 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
 
   const byEmployee = new Map<number, EmployeeSheet>();
 
-  // Seed all employees that have work entries
-  for (const { entry, employeeName, department } of rows) {
-    if (!byEmployee.has(entry.employeeId)) {
-      byEmployee.set(entry.employeeId, {
-        employeeId: entry.employeeId,
-        employeeName: employeeName ?? "Unknown",
-        department: department ?? null,
+  const ensureEmployee = (id: number, name: string, dept: string | null) => {
+    if (!byEmployee.has(id)) {
+      byEmployee.set(id, {
+        employeeId: id,
+        employeeName: name,
+        department: dept,
         totalMinutes: 0,
         totalTimeOffMinutes: 0,
         entries: [],
       });
     }
-    const emp = byEmployee.get(entry.employeeId)!;
+    return byEmployee.get(id)!;
+  };
 
+  // Seed all employees (so holidays appear for everyone)
+  for (const emp of allEmployees) {
+    ensureEmployee(emp.id, emp.name, emp.department ?? null);
+  }
+
+  // Work entries
+  for (const { entry, employeeName, department } of rows) {
+    const emp = ensureEmployee(entry.employeeId, employeeName ?? "Unknown", department ?? null);
     let totalMinutes: number | null = null;
     if (entry.clockOut) {
       totalMinutes = Math.round((entry.clockOut.getTime() - entry.clockIn.getTime()) / 60000);
       emp.totalMinutes += totalMinutes;
     }
-
     emp.entries.push({
       kind: "work",
       id: entry.id,
@@ -132,44 +153,24 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
     });
   }
 
-  // Add approved time-off entries — one entry per overlapping calendar day
-  const reportStartStr = dateStr(start);
-  const reportEndStr = dateStr(end);
-
+  // Approved time-off entries (one per overlapping calendar day)
   for (const { req: tor, employeeName, department } of allTimeOff) {
     if (empIdFilter && tor.employeeId !== empIdFilter) continue;
-
-    // Clamp to report period
     const effStart = tor.startDate < reportStartStr ? reportStartStr : tor.startDate;
     const effEnd = tor.endDate > reportEndStr ? reportEndStr : tor.endDate;
-
     const days = calcDays(effStart, effEnd);
+    const emp = ensureEmployee(tor.employeeId, employeeName ?? "Unknown", department ?? null);
 
-    if (!byEmployee.has(tor.employeeId)) {
-      byEmployee.set(tor.employeeId, {
-        employeeId: tor.employeeId,
-        employeeName: employeeName ?? "Unknown",
-        department: department ?? null,
-        totalMinutes: 0,
-        totalTimeOffMinutes: 0,
-        entries: [],
-      });
-    }
-    const emp = byEmployee.get(tor.employeeId)!;
-
-    // One entry per day
     for (let i = 0; i < days; i++) {
       const d = new Date(effStart + "T00:00:00");
       d.setDate(d.getDate() + i);
-      const dayStr = dateStr(d);
-
-      emp.totalTimeOffMinutes += 480; // 8h per day
+      emp.totalTimeOffMinutes += 480;
       emp.entries.push({
         kind: "time_off",
         id: null,
         employeeId: tor.employeeId,
         employeeName: employeeName ?? null,
-        date: dayStr,
+        date: dateStr(d),
         clockIn: null,
         clockOut: null,
         totalMinutes: 480,
@@ -181,18 +182,46 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
     }
   }
 
-  // Sort each employee's entries by date
+  // Company holidays — one entry per employee per holiday day
+  for (const holiday of holidays) {
+    for (const emp of byEmployee.values()) {
+      const mins = holiday.hoursPerDay * 60;
+      emp.totalTimeOffMinutes += mins;
+      emp.entries.push({
+        kind: "time_off",
+        id: holiday.id,
+        employeeId: emp.employeeId,
+        employeeName: emp.employeeName,
+        date: holiday.date,
+        clockIn: null,
+        clockOut: null,
+        totalMinutes: mins,
+        notes: holiday.name,
+        createdAt: null,
+        timeOffType: "holiday",
+        timeOffRequestId: null,
+      });
+    }
+  }
+
+  // Sort each employee's entries by date, work entries before time-off on same day
   for (const emp of byEmployee.values()) {
     emp.entries.sort((a, b) => {
       const da = a.date ?? a.clockIn ?? "";
       const db2 = b.date ?? b.clockIn ?? "";
-      return da.localeCompare(db2);
+      if (da !== db2) return da.localeCompare(db2);
+      if (a.kind === "work" && b.kind !== "work") return -1;
+      if (a.kind !== "work" && b.kind === "work") return 1;
+      return 0;
     });
   }
 
-  res.json(
-    Array.from(byEmployee.values()).sort((a, b) => a.employeeName.localeCompare(b.employeeName))
-  );
+  // Remove employees with no entries at all (only if filtering was active and they have nothing)
+  const result = Array.from(byEmployee.values())
+    .filter((e) => e.entries.length > 0)
+    .sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+
+  res.json(result);
 });
 
 router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
@@ -209,17 +238,13 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
 
   const result = filtered.map((emp) => {
     const empReqs = requests.filter((r) => r.employeeId === emp.id);
-
     const usedHours = empReqs
       .filter((r) => r.status === "approved")
       .reduce((sum, r) => sum + calcDays(r.startDate, r.endDate) * 8, 0);
-
     const plannedHours = empReqs
       .filter((r) => r.status === "pending")
       .reduce((sum, r) => sum + calcDays(r.startDate, r.endDate) * 8, 0);
-
     const allottedHours = emp.timeOffAllotmentHours ?? 80;
-
     return {
       employeeId: emp.id,
       employeeName: emp.name,

@@ -60,6 +60,26 @@ A time clock web application for small teams (10-15 employees) to track daily cl
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
 
+## Holidays
+
+- `holidays` DB table: id, name, date (YYYY-MM-DD TEXT), hoursPerDay (integer, default 8), createdAt, updatedAt
+- CRUD via `GET/POST /holidays`, `PATCH/DELETE /holidays/:id`
+- Holidays page (`/holidays`) is admin-only; visible in nav for admins
+- In the timesheets report, holidays are added as entries for all employees (kind="time_off", timeOffType="holiday", notes=holiday name)
+- Holidays do NOT reduce PTO balances
+
+## Calendar / Reports week format
+
+- Calendar (time-off page) and Reports presets both use **Sunday–Saturday** week format
+- `getSundayOfWeek(date)` is the week-start helper in `reports.tsx`
+- Calendar `firstOffset = firstDay.getDay()` (native JS Sunday=0 offset)
+
+## Profile page
+
+- `/profile` is a dedicated full page (navigated via the user dropdown)
+- Shows employee info card (name, department, role, time off balance), then Clerk UserProfile for account settings (profile picture, name, password, etc.)
+- The dialog approach has been replaced entirely
+
 ## Gotchas
 
 - Always run `pnpm --filter @workspace/api-spec run codegen` after changing `openapi.yaml`

@@ -52,7 +52,7 @@ function requestsOnDay(dateStr: string, requests: TimeOffRequest[]): TimeOffRequ
 }
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DAY_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
   const today = new Date();
@@ -61,7 +61,7 @@ function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  const firstOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+  const firstOffset = firstDay.getDay();
   const rows = Math.ceil((firstOffset + lastDay.getDate()) / 7);
   const todayStr = toDateStr(today);
 

@@ -98,6 +98,21 @@ export interface TimeEntryUpdate {
   notes?: string;
 }
 
+export interface Holiday {
+  id: number;
+  name: string;
+  date: string;
+  hoursPerDay: number;
+  createdAt: string;
+}
+
+export interface HolidayInput {
+  /** @minLength 1 */
+  name: string;
+  date: string;
+  hoursPerDay?: number;
+}
+
 export interface ManualTimeEntryInput {
   employeeId: number;
   clockIn: string;

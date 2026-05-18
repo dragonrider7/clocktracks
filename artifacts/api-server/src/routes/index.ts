@@ -6,6 +6,7 @@ import timeEntriesRouter from "./timeEntries";
 import timeOffRequestsRouter from "./timeOffRequests";
 import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
+import holidaysRouter from "./holidays";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(timeEntriesRouter);
 router.use(timeOffRequestsRouter);
 router.use(dashboardRouter);
 router.use(reportsRouter);
+router.use(holidaysRouter);
 
 export default router;

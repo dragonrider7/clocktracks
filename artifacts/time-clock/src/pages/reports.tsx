@@ -21,28 +21,31 @@ type ReportTab = "timesheets" | "time-off";
 const TIME_OFF_TYPE_LABELS: Record<string, string> = {
   vacation: "Vacation", pto: "PTO", sick: "Sick Day",
   bereavement: "Bereavement", personal: "Personal", other: "Other",
+  holiday: "Holiday",
 };
 const TIME_OFF_TYPE_COLORS: Record<string, string> = {
   vacation: "bg-blue-100 text-blue-800", pto: "bg-sky-100 text-sky-800",
   sick: "bg-red-100 text-red-800", bereavement: "bg-gray-100 text-gray-700",
   personal: "bg-purple-100 text-purple-800", other: "bg-zinc-100 text-zinc-700",
+  holiday: "bg-amber-100 text-amber-800",
 };
 
-function getMondayOfWeek(date: Date): Date {
-  const d = new Date(date); const day = d.getDay();
-  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)); d.setHours(0, 0, 0, 0); return d;
+function getSundayOfWeek(date: Date): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay());
+  d.setHours(0, 0, 0, 0); return d;
 }
 function toDateStr(d: Date): string { return d.toISOString().split("T")[0]; }
 function addDays(d: Date, n: number): Date { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 
 function getPresetRange(preset: Preset): { startDate: string; endDate: string } {
-  const today = new Date(); const thisMonday = getMondayOfWeek(today);
+  const today = new Date(); const thisSunday = getSundayOfWeek(today);
   switch (preset) {
-    case "this-week": return { startDate: toDateStr(thisMonday), endDate: toDateStr(addDays(thisMonday, 6)) };
-    case "last-week": { const lm = addDays(thisMonday, -7); return { startDate: toDateStr(lm), endDate: toDateStr(addDays(lm, 6)) }; }
-    case "this-biweek": return { startDate: toDateStr(addDays(thisMonday, -7)), endDate: toDateStr(addDays(thisMonday, 6)) };
-    case "last-biweek": return { startDate: toDateStr(addDays(thisMonday, -21)), endDate: toDateStr(addDays(thisMonday, -8)) };
-    case "custom": return { startDate: toDateStr(thisMonday), endDate: toDateStr(addDays(thisMonday, 6)) };
+    case "this-week": return { startDate: toDateStr(thisSunday), endDate: toDateStr(addDays(thisSunday, 6)) };
+    case "last-week": { const ls = addDays(thisSunday, -7); return { startDate: toDateStr(ls), endDate: toDateStr(addDays(ls, 6)) }; }
+    case "this-biweek": return { startDate: toDateStr(addDays(thisSunday, -7)), endDate: toDateStr(addDays(thisSunday, 6)) };
+    case "last-biweek": return { startDate: toDateStr(addDays(thisSunday, -21)), endDate: toDateStr(addDays(thisSunday, -8)) };
+    case "custom": return { startDate: toDateStr(thisSunday), endDate: toDateStr(addDays(thisSunday, 6)) };
   }
 }
 
@@ -172,8 +175,8 @@ function TimeOffBalancesTab({ employees }: { employees: { id: number; name: stri
 // ─── Timesheets Tab ──────────────────────────────────────────────────────────
 function TimesheetsTab({ employees }: { employees: { id: number; name: string }[] | undefined }) {
   const [preset, setPreset] = useState<Preset>("this-week");
-  const [customStart, setCustomStart] = useState(toDateStr(getMondayOfWeek(new Date())));
-  const [customEnd, setCustomEnd] = useState(toDateStr(addDays(getMondayOfWeek(new Date()), 6)));
+  const [customStart, setCustomStart] = useState(toDateStr(getSundayOfWeek(new Date())));
+  const [customEnd, setCustomEnd] = useState(toDateStr(addDays(getSundayOfWeek(new Date()), 6)));
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 

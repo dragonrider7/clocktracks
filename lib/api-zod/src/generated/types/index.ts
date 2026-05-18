@@ -21,6 +21,8 @@ export * from './employeeWeeklyHours';
 export * from './getTimeOffBalancesParams';
 export * from './getTimesheetReportParams';
 export * from './healthStatus';
+export * from './holiday';
+export * from './holidayInput';
 export * from './listTimeEntriesParams';
 export * from './listTimeOffRequestsParams';
 export * from './listTimeOffRequestsStatus';
