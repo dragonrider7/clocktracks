@@ -1,13 +1,17 @@
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift } from "lucide-react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { useMe } from "@/App";
+import { useTheme, THEMES } from "@/contexts/theme-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -17,6 +21,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { signOut } = useClerk();
   const { user } = useUser();
   const { me, isAdmin } = useMe();
+  const { theme, setTheme } = useTheme();
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
@@ -32,10 +37,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     ? me.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
+  const currentTheme = THEMES.find((t) => t.value === theme) ?? THEMES[0];
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 mt-4">
-        <div className="flex w-full items-center gap-4 bg-gradient-to-r from-primary to-blue-700 p-3 px-4 rounded-xl shadow-md justify-between">
+        <div
+          className="flex w-full items-center p-3 px-4 rounded-xl shadow-md justify-between"
+          style={{ background: `linear-gradient(to right, hsl(var(--primary)), hsl(var(--nav-gradient-to)))` }}
+        >
           <div className="flex items-center gap-6">
             <div className="font-bold text-lg flex items-center gap-2 text-white shrink-0">
               <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-6 w-6 brightness-0 invert" />
@@ -101,6 +111,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <UserCircle className="h-4 w-4" />
                 My Profile
               </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                  <Palette className="h-4 w-4" />
+                  <span>Theme</span>
+                  <span className={`ml-auto h-3 w-3 rounded-full ${currentTheme.dot}`} />
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-40">
+                  {THEMES.map((t) => (
+                    <DropdownMenuItem
+                      key={t.value}
+                      onClick={() => setTheme(t.value)}
+                      className="flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <span className={`h-3.5 w-3.5 rounded-full border-2 ${t.dot} border-opacity-60`} />
+                      <span>{t.label}</span>
+                      {theme === t.value && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 data-testid="button-sign-out"

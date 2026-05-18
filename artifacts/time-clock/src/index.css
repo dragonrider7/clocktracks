@@ -69,7 +69,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE */
+/* ── LIGHT (default blue) ──────────────────────────── */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -114,6 +114,8 @@
   --chart-4: 214 32% 91%;
   --chart-5: 222 47% 11%;
 
+  --nav-gradient-to: 221 83% 38%;
+
   --app-font-sans: 'Plus Jakarta Sans', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: Menlo, monospace;
@@ -130,13 +132,14 @@
   --spacing: 0.25rem;
 }
 
+/* ── DARK ──────────────────────────────────────────── */
 .dark {
   --background: 222 47% 11%;
   --foreground: 210 40% 98%;
   --border: 217 33% 17%;
-  --card: 222 47% 11%;
+  --card: 222 47% 13%;
   --card-foreground: 210 40% 98%;
-  --card-border: 217 33% 17%;
+  --card-border: 217 33% 20%;
   --sidebar: 222 47% 11%;
   --sidebar-foreground: 210 40% 98%;
   --sidebar-border: 217 33% 17%;
@@ -145,9 +148,9 @@
   --sidebar-accent: 217 33% 17%;
   --sidebar-accent-foreground: 210 40% 98%;
   --sidebar-ring: 224 76% 48%;
-  --popover: 222 47% 11%;
+  --popover: 222 47% 13%;
   --popover-foreground: 210 40% 98%;
-  --popover-border: 217 33% 17%;
+  --popover-border: 217 33% 20%;
   --primary: 217 91% 60%;
   --primary-foreground: 222 47% 11%;
   --secondary: 217 33% 17%;
@@ -156,15 +159,58 @@
   --muted-foreground: 215 20% 65%;
   --accent: 217 33% 17%;
   --accent-foreground: 210 40% 98%;
-  --destructive: 0 62% 30%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 210 40% 98%;
-  --input: 217 33% 17%;
+  --input: 217 33% 20%;
   --ring: 224 76% 48%;
   --chart-1: 217 91% 60%;
   --chart-2: 217 33% 17%;
   --chart-3: 215 20% 65%;
   --chart-4: 217 33% 17%;
   --chart-5: 210 40% 98%;
+
+  --nav-gradient-to: 217 91% 44%;
+
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .06);
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+}
+
+/* ── FOREST (green) ────────────────────────────────── */
+.forest {
+  --primary: 142 71% 40%;
+  --primary-foreground: 0 0% 100%;
+  --sidebar-primary: 142 71% 40%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-ring: 142 71% 40%;
+  --sidebar-accent: 138 30% 94%;
+  --sidebar-accent-foreground: 140 40% 15%;
+  --ring: 142 71% 40%;
+  --chart-1: 142 71% 40%;
+  --background: 138 30% 97%;
+  --muted: 138 20% 93%;
+  --accent: 138 20% 93%;
+
+  --nav-gradient-to: 142 71% 27%;
+}
+
+/* ── SUNSET (warm orange) ──────────────────────────── */
+.sunset {
+  --primary: 24 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --sidebar-primary: 24 95% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-ring: 24 95% 53%;
+  --sidebar-accent: 30 50% 94%;
+  --sidebar-accent-foreground: 20 40% 15%;
+  --ring: 24 95% 53%;
+  --chart-1: 24 95% 53%;
+  --background: 35 50% 98%;
+  --muted: 30 30% 93%;
+  --accent: 30 30% 93%;
+
+  --nav-gradient-to: 15 90% 40%;
 }
 
 @layer base {
