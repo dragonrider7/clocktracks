@@ -100,21 +100,48 @@ type MeContextType = {
   me: Employee | undefined;
   isLoading: boolean;
   isAdmin: boolean;
+  isNotAuthorized: boolean;
 };
 
-const MeContext = createContext<MeContextType>({ me: undefined, isLoading: true, isAdmin: false });
+const MeContext = createContext<MeContextType>({ me: undefined, isLoading: true, isAdmin: false, isNotAuthorized: false });
 export const useMe = () => useContext(MeContext);
 
 function MeProvider({ children }: { children: React.ReactNode }) {
   const { isSignedIn } = useUser();
-  const { data: me, isLoading } = useGetMe({
+  const { signOut } = useClerk();
+  const { data: me, isLoading, error } = useGetMe({
     query: {
       enabled: !!isSignedIn,
       queryKey: getGetMeQueryKey(),
+      retry: false,
     },
   });
+
+  // 403 = signed-in user has no matching employee record
+  const isNotAuthorized = !isLoading && (error as { status?: number } | null)?.status === 403;
+
+  if (isNotAuthorized) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-6 px-4 text-center">
+        <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-12 w-12 opacity-60" />
+        <div className="space-y-2">
+          <h1 className="text-xl font-semibold text-foreground">Access not set up yet</h1>
+          <p className="text-muted-foreground max-w-sm">
+            Your account hasn't been added to this system. Please ask your administrator to add your email address as an employee, then sign in again.
+          </p>
+        </div>
+        <button
+          onClick={() => signOut({ redirectUrl: basePath || "/" })}
+          className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <MeContext.Provider value={{ me, isLoading, isAdmin: me?.role === "admin" }}>
+    <MeContext.Provider value={{ me, isLoading, isAdmin: me?.role === "admin", isNotAuthorized: false }}>
       {children}
     </MeContext.Provider>
   );

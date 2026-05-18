@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { clerkClient } from "@clerk/express";
 import { db, employeesTable } from "@workspace/db";
@@ -15,59 +15,65 @@ router.get("/me", async (req, res): Promise<void> => {
     return;
   }
 
-  // Try to find employee by clerkUserId
+  // 1. Try to find employee already linked by Clerk user ID
   let [employee] = await db
     .select()
     .from(employeesTable)
     .where(eq(employeesTable.clerkUserId, clerkUserId));
 
   if (!employee) {
-    // Try to find by email using Clerk user data
+    let clerkUser;
     try {
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
-      const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+      clerkUser = await clerkClient.users.getUser(clerkUserId);
+    } catch (err) {
+      req.log.error({ err }, "Failed to fetch Clerk user");
+      res.status(500).json({ error: "Failed to look up user" });
+      return;
+    }
 
-      if (email) {
+    const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+    // 2. Try to match by email to an existing employee record
+    if (email) {
+      [employee] = await db
+        .select()
+        .from(employeesTable)
+        .where(eq(employeesTable.email, email));
+
+      if (employee) {
+        // Link the Clerk user ID so future lookups skip this step
         [employee] = await db
-          .select()
-          .from(employeesTable)
-          .where(eq(employeesTable.email, email));
-
-        if (employee) {
-          // Link the Clerk user to this employee record
-          [employee] = await db
-            .update(employeesTable)
-            .set({ clerkUserId })
-            .where(eq(employeesTable.id, employee.id))
-            .returning();
-        }
+          .update(employeesTable)
+          .set({ clerkUserId })
+          .where(eq(employeesTable.id, employee.id))
+          .returning();
       }
+    }
 
-      if (!employee) {
-        // JIT provision a new employee record
+    // 3. No match found — check if this is the very first user ever (bootstrap admin)
+    if (!employee) {
+      const [{ count }] = await db
+        .select({ count: db.$count(employeesTable) })
+        .from(employeesTable);
+
+      const isFirstUser = Number(count) === 0;
+
+      if (isFirstUser) {
+        // First account ever → create as admin so the system can be managed
         const name =
           clerkUser.firstName && clerkUser.lastName
             ? `${clerkUser.firstName} ${clerkUser.lastName}`
-            : clerkUser.firstName || clerkUser.username || email || "Unknown";
-
-        // Check if this is the first user — make them admin
-        const existing = await db.select().from(employeesTable);
-        const isFirstUser = existing.length === 0;
+            : clerkUser.firstName || clerkUser.username || email || "Admin";
 
         [employee] = await db
           .insert(employeesTable)
-          .values({
-            name,
-            email: email || null,
-            clerkUserId,
-            role: isFirstUser ? "admin" : "employee",
-          })
+          .values({ name, email: email ?? null, clerkUserId, role: "admin" })
           .returning();
+      } else {
+        // Not the first user and no matching employee record → deny access
+        res.status(403).json({ error: "not_authorized" });
+        return;
       }
-    } catch (err) {
-      req.log.error({ err }, "Failed to fetch Clerk user");
-      res.status(500).json({ error: "Failed to provision user" });
-      return;
     }
   }
 
