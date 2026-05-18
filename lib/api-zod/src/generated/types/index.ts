@@ -44,3 +44,5 @@ export * from './timeOffReviewStatus';
 export * from './timeOffTypeBreakdown';
 export * from './timesheetEntry';
 export * from './timesheetEntryKind';
+export * from './upcomingEvent';
+export * from './upcomingEventKind';

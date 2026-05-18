@@ -19,5 +19,9 @@ export interface Employee {
   email?: string | null;
   /** @nullable */
   timeOffAllotmentHours?: number | null;
+  /** @nullable */
+  hiredDate?: string | null;
+  /** @nullable */
+  birthday?: string | null;
   createdAt: string;
 }

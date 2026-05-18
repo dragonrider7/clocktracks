@@ -15,4 +15,6 @@ export interface EmployeeUpdate {
   department?: string;
   email?: string;
   timeOffAllotmentHours?: number;
+  hiredDate?: string;
+  birthday?: string;
 }

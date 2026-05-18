@@ -457,6 +457,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/OutThisWeekEntry"
 
+  /dashboard/upcoming-events:
+    get:
+      operationId: getUpcomingEvents
+      tags: [dashboard]
+      summary: Get upcoming birthdays and work anniversaries (next 30 days)
+      responses:
+        "200":
+          description: Upcoming events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UpcomingEvent"
+
   /reports/time-off-balances:
     get:
       operationId: getTimeOffBalances
@@ -617,6 +632,10 @@ components:
           type: ["string", "null"]
         timeOffAllotmentHours:
           type: ["integer", "null"]
+        hiredDate:
+          type: ["string", "null"]
+        birthday:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -638,6 +657,10 @@ components:
           type: string
         timeOffAllotmentHours:
           type: integer
+        hiredDate:
+          type: string
+        birthday:
+          type: string
 
     EmployeeUpdate:
       type: object
@@ -656,6 +679,10 @@ components:
           type: string
         timeOffAllotmentHours:
           type: integer
+        hiredDate:
+          type: string
+        birthday:
+          type: string
 
     TimeEntry:
       type: object
@@ -903,6 +930,28 @@ components:
           type: string
         endDate:
           type: string
+
+    UpcomingEvent:
+      type: object
+      required: [employeeId, employeeName, kind, label, date, daysUntil]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        department:
+          type: ["string", "null"]
+        kind:
+          type: string
+          enum: [birthday, anniversary]
+        label:
+          type: string
+        date:
+          type: string
+        daysUntil:
+          type: integer
+        yearsOfService:
+          type: ["integer", "null"]
 
     TimeOffTypeBreakdown:
       type: object

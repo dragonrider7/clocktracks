@@ -26,6 +26,8 @@ export default function Employees() {
     role: "employee" | "admin";
     email: string;
     timeOffAllotmentHours: number;
+    hiredDate: string;
+    birthday: string;
   } | null>(null);
   const [newEmp, setNewEmp] = useState({
     name: "",
@@ -33,6 +35,8 @@ export default function Employees() {
     role: "employee" as "employee" | "admin",
     email: "",
     timeOffAllotmentHours: DEFAULT_ALLOTMENT,
+    hiredDate: "",
+    birthday: "",
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -46,12 +50,22 @@ export default function Employees() {
   const handleAdd = () => {
     if (!newEmp.name) return;
     createMutation.mutate(
-      { data: { name: newEmp.name, role: newEmp.role, department: newEmp.department || undefined, email: newEmp.email || undefined, timeOffAllotmentHours: newEmp.timeOffAllotmentHours } },
+      {
+        data: {
+          name: newEmp.name,
+          role: newEmp.role,
+          department: newEmp.department || undefined,
+          email: newEmp.email || undefined,
+          timeOffAllotmentHours: newEmp.timeOffAllotmentHours,
+          hiredDate: newEmp.hiredDate || undefined,
+          birthday: newEmp.birthday || undefined,
+        },
+      },
       {
         onSuccess: () => {
           toast({ title: "Employee added" });
           setIsAddOpen(false);
-          setNewEmp({ name: "", department: "", role: "employee", email: "", timeOffAllotmentHours: DEFAULT_ALLOTMENT });
+          setNewEmp({ name: "", department: "", role: "employee", email: "", timeOffAllotmentHours: DEFAULT_ALLOTMENT, hiredDate: "", birthday: "" });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
         },
       }
@@ -71,7 +85,18 @@ export default function Employees() {
   const handleUpdate = () => {
     if (!editEmp) return;
     updateMutation.mutate(
-      { id: editEmp.id, data: { name: editEmp.name, role: editEmp.role, department: editEmp.department || undefined, email: editEmp.email || undefined, timeOffAllotmentHours: editEmp.timeOffAllotmentHours } },
+      {
+        id: editEmp.id,
+        data: {
+          name: editEmp.name,
+          role: editEmp.role,
+          department: editEmp.department || undefined,
+          email: editEmp.email || undefined,
+          timeOffAllotmentHours: editEmp.timeOffAllotmentHours,
+          hiredDate: editEmp.hiredDate || undefined,
+          birthday: editEmp.birthday || undefined,
+        },
+      },
       {
         onSuccess: () => {
           toast({ title: "Employee updated" });
@@ -92,7 +117,7 @@ export default function Employees() {
               <UserPlus className="w-4 h-4 mr-2" />Add Employee
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Add New Employee</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
@@ -132,6 +157,24 @@ export default function Employees() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Default is {DEFAULT_ALLOTMENT}h ({DEFAULT_ALLOTMENT / 8} days). Each day of time off = 8 hours.</p>
               </div>
+              <div>
+                <label className="text-sm font-medium">Hired Date</label>
+                <Input
+                  type="date"
+                  value={newEmp.hiredDate}
+                  onChange={(e) => setNewEmp({ ...newEmp, hiredDate: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Used to celebrate work anniversaries on the dashboard.</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Birthday</label>
+                <Input
+                  type="date"
+                  value={newEmp.birthday}
+                  onChange={(e) => setNewEmp({ ...newEmp, birthday: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Used to display upcoming birthdays on the dashboard.</p>
+              </div>
               <Button className="w-full" onClick={handleAdd} disabled={!newEmp.name || createMutation.isPending} data-testid="button-create-employee">
                 Create Employee
               </Button>
@@ -148,13 +191,14 @@ export default function Employees() {
               <TableHead>Department</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Time Off Allotment</TableHead>
+              <TableHead>Hired Date</TableHead>
               <TableHead>Linked Account</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
             ) : (
               employees?.map((emp) => {
                 const allotment = emp.timeOffAllotmentHours ?? DEFAULT_ALLOTMENT;
@@ -177,6 +221,11 @@ export default function Employees() {
                       <span className="text-sm font-medium">{allotment}h</span>
                       <span className="text-xs text-muted-foreground ml-1.5">({Math.round(allotment / 8)} days)</span>
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {(emp as typeof emp & { hiredDate?: string | null }).hiredDate
+                        ? new Date((emp as typeof emp & { hiredDate?: string | null }).hiredDate!.replace(/-/g, "/")).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })
+                        : "—"}
+                    </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${(emp as typeof emp & { clerkUserId?: string | null }).clerkUserId ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
                         {(emp as typeof emp & { clerkUserId?: string | null }).clerkUserId ? "Connected" : "Not signed in"}
@@ -185,7 +234,16 @@ export default function Employees() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" data-testid={`button-edit-${emp.id}`}
-                          onClick={() => setEditEmp({ id: emp.id, name: emp.name, department: emp.department ?? "", role: (emp.role as "employee" | "admin") ?? "employee", email: emp.email ?? "", timeOffAllotmentHours: allotment })}>
+                          onClick={() => setEditEmp({
+                            id: emp.id,
+                            name: emp.name,
+                            department: emp.department ?? "",
+                            role: (emp.role as "employee" | "admin") ?? "employee",
+                            email: emp.email ?? "",
+                            timeOffAllotmentHours: allotment,
+                            hiredDate: (emp as typeof emp & { hiredDate?: string | null }).hiredDate ?? "",
+                            birthday: (emp as typeof emp & { birthday?: string | null }).birthday ?? "",
+                          })}>
                           <Pencil className="w-4 h-4 text-muted-foreground" />
                         </Button>
                         <Button variant="ghost" size="icon" data-testid={`button-delete-${emp.id}`} onClick={() => handleDelete(emp.id)}>
@@ -202,7 +260,7 @@ export default function Employees() {
       </CardContent>
 
       <Dialog open={!!editEmp} onOpenChange={(open) => !open && setEditEmp(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Employee</DialogTitle></DialogHeader>
           {editEmp && (
             <div className="space-y-4 pt-4">
@@ -242,6 +300,24 @@ export default function Employees() {
                   <span className="text-sm text-muted-foreground">hours ({Math.round(editEmp.timeOffAllotmentHours / 8)} days)</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Each day of time off = 8 hours.</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Hired Date</label>
+                <Input
+                  type="date"
+                  value={editEmp.hiredDate}
+                  onChange={(e) => setEditEmp({ ...editEmp, hiredDate: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Used to celebrate work anniversaries on the dashboard.</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Birthday</label>
+                <Input
+                  type="date"
+                  value={editEmp.birthday}
+                  onChange={(e) => setEditEmp({ ...editEmp, birthday: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Used to display upcoming birthdays on the dashboard.</p>
               </div>
               <Button className="w-full" onClick={handleUpdate} disabled={!editEmp.name || updateMutation.isPending}>
                 Save Changes

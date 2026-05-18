@@ -19,6 +19,8 @@ export const GetMeResponse = zod.object({
   "department": zod.string().nullable(),
   "email": zod.string().nullish(),
   "timeOffAllotmentHours": zod.number().nullish(),
+  "hiredDate": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -43,6 +45,8 @@ export const ListEmployeesResponseItem = zod.object({
   "department": zod.string().nullable(),
   "email": zod.string().nullish(),
   "timeOffAllotmentHours": zod.number().nullish(),
+  "hiredDate": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -60,7 +64,9 @@ export const CreateEmployeeBody = zod.object({
   "role": zod.enum(['employee', 'admin']),
   "department": zod.string().optional(),
   "email": zod.string().optional(),
-  "timeOffAllotmentHours": zod.number().optional()
+  "timeOffAllotmentHours": zod.number().optional(),
+  "hiredDate": zod.string().optional(),
+  "birthday": zod.string().optional()
 })
 
 
@@ -79,6 +85,8 @@ export const GetEmployeeResponse = zod.object({
   "department": zod.string().nullable(),
   "email": zod.string().nullish(),
   "timeOffAllotmentHours": zod.number().nullish(),
+  "hiredDate": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -99,7 +107,9 @@ export const UpdateEmployeeBody = zod.object({
   "role": zod.enum(['employee', 'admin']).optional(),
   "department": zod.string().optional(),
   "email": zod.string().optional(),
-  "timeOffAllotmentHours": zod.number().optional()
+  "timeOffAllotmentHours": zod.number().optional(),
+  "hiredDate": zod.string().optional(),
+  "birthday": zod.string().optional()
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -110,6 +120,8 @@ export const UpdateEmployeeResponse = zod.object({
   "department": zod.string().nullable(),
   "email": zod.string().nullish(),
   "timeOffAllotmentHours": zod.number().nullish(),
+  "hiredDate": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -368,6 +380,22 @@ export const GetOutThisWeekResponseItem = zod.object({
   "endDate": zod.string()
 })
 export const GetOutThisWeekResponse = zod.array(GetOutThisWeekResponseItem)
+
+
+/**
+ * @summary Get upcoming birthdays and work anniversaries (next 30 days)
+ */
+export const GetUpcomingEventsResponseItem = zod.object({
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "department": zod.string().nullish(),
+  "kind": zod.enum(['birthday', 'anniversary']),
+  "label": zod.string(),
+  "date": zod.string(),
+  "daysUntil": zod.number(),
+  "yearsOfService": zod.number().nullish()
+})
+export const GetUpcomingEventsResponse = zod.array(GetUpcomingEventsResponseItem)
 
 
 /**

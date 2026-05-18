@@ -11,6 +11,8 @@ export const employeesTable = pgTable("employees", {
   email: text("email"),
   clerkUserId: text("clerk_user_id").unique(),
   timeOffAllotmentHours: integer("time_off_allotment_hours").default(80),
+  hiredDate: text("hired_date"),
+  birthday: text("birthday"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

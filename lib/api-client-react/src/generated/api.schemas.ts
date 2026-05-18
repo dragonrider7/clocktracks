@@ -29,6 +29,10 @@ export interface Employee {
   email?: string | null;
   /** @nullable */
   timeOffAllotmentHours?: number | null;
+  /** @nullable */
+  hiredDate?: string | null;
+  /** @nullable */
+  birthday?: string | null;
   createdAt: string;
 }
 
@@ -48,6 +52,8 @@ export interface EmployeeInput {
   department?: string;
   email?: string;
   timeOffAllotmentHours?: number;
+  hiredDate?: string;
+  birthday?: string;
 }
 
 export type EmployeeUpdateRole = typeof EmployeeUpdateRole[keyof typeof EmployeeUpdateRole];
@@ -66,6 +72,8 @@ export interface EmployeeUpdate {
   department?: string;
   email?: string;
   timeOffAllotmentHours?: number;
+  hiredDate?: string;
+  birthday?: string;
 }
 
 export interface TimeEntry {
@@ -278,6 +286,27 @@ export interface OutThisWeekEntry {
   type: OutThisWeekEntryType;
   startDate: string;
   endDate: string;
+}
+
+export type UpcomingEventKind = typeof UpcomingEventKind[keyof typeof UpcomingEventKind];
+
+
+export const UpcomingEventKind = {
+  birthday: 'birthday',
+  anniversary: 'anniversary',
+} as const;
+
+export interface UpcomingEvent {
+  employeeId: number;
+  employeeName: string;
+  /** @nullable */
+  department?: string | null;
+  kind: UpcomingEventKind;
+  label: string;
+  date: string;
+  daysUntil: number;
+  /** @nullable */
+  yearsOfService?: number | null;
 }
 
 export interface TimeOffTypeBreakdown {

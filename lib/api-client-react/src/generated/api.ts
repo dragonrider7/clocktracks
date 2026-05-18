@@ -43,7 +43,8 @@ import type {
   TimeOffBalance,
   TimeOffRequest,
   TimeOffRequestInput,
-  TimeOffReview
+  TimeOffReview,
+  UpcomingEvent
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1690,6 +1691,83 @@ export function useGetOutThisWeek<TData = Awaited<ReturnType<typeof getOutThisWe
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetOutThisWeekQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetUpcomingEventsUrl = () => {
+
+
+
+
+  return `/api/dashboard/upcoming-events`
+}
+
+/**
+ * @summary Get upcoming birthdays and work anniversaries (next 30 days)
+ */
+export const getUpcomingEvents = async ( options?: RequestInit): Promise<UpcomingEvent[]> => {
+
+  return customFetch<UpcomingEvent[]>(getGetUpcomingEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUpcomingEventsQueryKey = () => {
+    return [
+    `/api/dashboard/upcoming-events`
+    ] as const;
+    }
+
+
+export const getGetUpcomingEventsQueryOptions = <TData = Awaited<ReturnType<typeof getUpcomingEvents>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUpcomingEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUpcomingEventsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUpcomingEvents>>> = ({ signal }) => getUpcomingEvents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUpcomingEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUpcomingEventsQueryResult = NonNullable<Awaited<ReturnType<typeof getUpcomingEvents>>>
+export type GetUpcomingEventsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get upcoming birthdays and work anniversaries (next 30 days)
+ */
+
+export function useGetUpcomingEvents<TData = Awaited<ReturnType<typeof getUpcomingEvents>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUpcomingEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUpcomingEventsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

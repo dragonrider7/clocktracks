@@ -15,4 +15,6 @@ export interface EmployeeInput {
   department?: string;
   email?: string;
   timeOffAllotmentHours?: number;
+  hiredDate?: string;
+  birthday?: string;
 }

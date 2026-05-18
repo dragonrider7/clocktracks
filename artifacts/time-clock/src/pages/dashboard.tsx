@@ -3,10 +3,11 @@ import {
   useGetWeeklyHours,
   useGetPendingRequests,
   useGetOutThisWeek,
+  useGetUpcomingEvents,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, CalendarIcon, Umbrella, TrendingUp } from "lucide-react";
+import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 
@@ -58,6 +59,7 @@ export default function Dashboard() {
   const { data: weeklyHours, isLoading: hoursLoading } = useGetWeeklyHours();
   const { data: pendingRequests, isLoading: pendingLoading } = useGetPendingRequests();
   const { data: outThisWeek, isLoading: outLoading } = useGetOutThisWeek();
+  const { data: upcomingEvents, isLoading: eventsLoading } = useGetUpcomingEvents();
 
   return (
     <div className="grid gap-4 md:gap-6">
@@ -145,7 +147,7 @@ export default function Dashboard() {
               <TrendingUp className="h-4 w-4 text-emerald-500" />
               <CardTitle>This Week's Hours</CardTitle>
             </div>
-            <CardDescription>Total hours worked since Monday</CardDescription>
+            <CardDescription>Total hours worked this week</CardDescription>
           </CardHeader>
           <CardContent>
             {hoursLoading ? (
@@ -181,47 +183,102 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Umbrella className="h-4 w-4 text-violet-500" />
-            <CardTitle>Out This Week</CardTitle>
-          </div>
-          <CardDescription>Employees on approved time off this week</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {outLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (outThisWeek?.length ?? 0) === 0 ? (
-            <div className="text-center py-6 text-muted-foreground text-sm">
-              No one is on approved time off this week.
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Umbrella className="h-4 w-4 text-violet-500" />
+              <CardTitle>Out This Week</CardTitle>
             </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {outThisWeek?.map((item) => (
-                <div
-                  key={item.requestId}
-                  className="flex items-center gap-3 p-3 rounded-xl border bg-violet-50 border-violet-100"
-                >
-                  <EmployeeAvatar name={item.employeeName} size="md" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{item.employeeName}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <Badge className={`text-xs px-1.5 py-0 ${TYPE_COLORS[item.type] ?? TYPE_COLORS.other}`}>
-                        {item.type}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {fmtDateShort(item.startDate)}
-                        {item.startDate !== item.endDate && ` – ${fmtDateShort(item.endDate)}`}
-                      </span>
+            <CardDescription>Employees on approved time off this week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {outLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (outThisWeek?.length ?? 0) === 0 ? (
+              <div className="text-center py-6 text-muted-foreground text-sm">
+                No one is on approved time off this week.
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {outThisWeek?.map((item) => (
+                  <div
+                    key={item.requestId}
+                    className="flex items-center gap-3 p-3 rounded-xl border bg-violet-50 border-violet-100"
+                  >
+                    <EmployeeAvatar name={item.employeeName} size="md" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{item.employeeName}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <Badge className={`text-xs px-1.5 py-0 ${TYPE_COLORS[item.type] ?? TYPE_COLORS.other}`}>
+                          {item.type}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {fmtDateShort(item.startDate)}
+                          {item.startDate !== item.endDate && ` – ${fmtDateShort(item.endDate)}`}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Gift className="h-4 w-4 text-pink-500" />
+              <CardTitle>Upcoming Celebrations</CardTitle>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <CardDescription>Birthdays and work anniversaries in the next 30 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {eventsLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (upcomingEvents?.length ?? 0) === 0 ? (
+              <div className="text-center py-6 text-muted-foreground text-sm">
+                No upcoming birthdays or anniversaries.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcomingEvents?.map((event, idx) => (
+                  <div
+                    key={`${event.employeeId}-${event.kind}-${idx}`}
+                    className={`flex items-center gap-3 p-3 rounded-xl border ${
+                      event.kind === "birthday"
+                        ? "bg-pink-50 border-pink-100"
+                        : "bg-amber-50 border-amber-100"
+                    }`}
+                  >
+                    <EmployeeAvatar name={event.employeeName} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{event.employeeName}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {event.kind === "birthday" ? (
+                          <Gift className="h-3 w-3 text-pink-500 shrink-0" />
+                        ) : (
+                          <Star className="h-3 w-3 text-amber-500 shrink-0" />
+                        )}
+                        <span className="text-xs text-muted-foreground">{event.label}</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold">
+                        {fmtDateShort(event.date)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {event.daysUntil === 0 ? "Today!" : event.daysUntil === 1 ? "Tomorrow" : `In ${event.daysUntil} days`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

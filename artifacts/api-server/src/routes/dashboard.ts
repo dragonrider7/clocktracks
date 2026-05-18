@@ -52,12 +52,12 @@ router.get("/dashboard/current-status", async (_req, res): Promise<void> => {
 router.get("/dashboard/weekly-hours", async (_req, res): Promise<void> => {
   const now = new Date();
   const dayOfWeek = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() - dayOfWeek);
+  sunday.setHours(0, 0, 0, 0);
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  saturday.setHours(23, 59, 59, 999);
 
   const entries = await db
     .select({
@@ -69,8 +69,8 @@ router.get("/dashboard/weekly-hours", async (_req, res): Promise<void> => {
     .leftJoin(employeesTable, eq(timeEntriesTable.employeeId, employeesTable.id))
     .where(
       and(
-        gte(timeEntriesTable.clockIn, monday),
-        lte(timeEntriesTable.clockIn, sunday)
+        gte(timeEntriesTable.clockIn, sunday),
+        lte(timeEntriesTable.clockIn, saturday)
       )
     );
 
@@ -117,15 +117,15 @@ router.get("/dashboard/out-this-week", async (_req, res): Promise<void> => {
   const { timeOffRequestsTable } = await import("@workspace/db");
   const now = new Date();
   const dayOfWeek = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() - dayOfWeek);
+  sunday.setHours(0, 0, 0, 0);
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+  saturday.setHours(23, 59, 59, 999);
 
-  const mondayStr = monday.toISOString().split("T")[0];
   const sundayStr = sunday.toISOString().split("T")[0];
+  const saturdayStr = saturday.toISOString().split("T")[0];
 
   const rows = await db
     .select({
@@ -138,8 +138,8 @@ router.get("/dashboard/out-this-week", async (_req, res): Promise<void> => {
     .where(
       and(
         eq(timeOffRequestsTable.status, "approved"),
-        lte(timeOffRequestsTable.startDate, sundayStr),
-        gte(timeOffRequestsTable.endDate, mondayStr),
+        lte(timeOffRequestsTable.startDate, saturdayStr),
+        gte(timeOffRequestsTable.endDate, sundayStr),
       ),
     );
 
@@ -154,6 +154,78 @@ router.get("/dashboard/out-this-week", async (_req, res): Promise<void> => {
       endDate: req.endDate,
     })),
   );
+});
+
+router.get("/dashboard/upcoming-events", async (_req, res): Promise<void> => {
+  const employees = await db.select().from(employeesTable);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const WINDOW_DAYS = 30;
+
+  type UpcomingEvent = {
+    employeeId: number;
+    employeeName: string;
+    department: string | null;
+    kind: "birthday" | "anniversary";
+    label: string;
+    date: string;
+    daysUntil: number;
+    yearsOfService: number | null;
+  };
+
+  const events: UpcomingEvent[] = [];
+
+  for (const emp of employees) {
+    // Birthday
+    if (emp.birthday) {
+      const parts = emp.birthday.split("-").map(Number);
+      const month = parts[1];
+      const day = parts[2];
+      const thisYearDate = new Date(today.getFullYear(), month - 1, day);
+      const target = thisYearDate >= today ? thisYearDate : new Date(today.getFullYear() + 1, month - 1, day);
+      const daysUntil = Math.round((target.getTime() - today.getTime()) / 86400000);
+      if (daysUntil <= WINDOW_DAYS) {
+        events.push({
+          employeeId: emp.id,
+          employeeName: emp.name,
+          department: emp.department ?? null,
+          kind: "birthday",
+          label: "Birthday",
+          date: target.toISOString().split("T")[0],
+          daysUntil,
+          yearsOfService: null,
+        });
+      }
+    }
+
+    // Work Anniversary
+    if (emp.hiredDate) {
+      const parts = emp.hiredDate.split("-").map(Number);
+      const hireYear = parts[0];
+      const month = parts[1];
+      const day = parts[2];
+      const thisYearDate = new Date(today.getFullYear(), month - 1, day);
+      const target = thisYearDate >= today ? thisYearDate : new Date(today.getFullYear() + 1, month - 1, day);
+      const daysUntil = Math.round((target.getTime() - today.getTime()) / 86400000);
+      const yearsOfService = target.getFullYear() - hireYear;
+      if (daysUntil <= WINDOW_DAYS && yearsOfService > 0) {
+        events.push({
+          employeeId: emp.id,
+          employeeName: emp.name,
+          department: emp.department ?? null,
+          kind: "anniversary",
+          label: yearsOfService === 1 ? "1-Year Work Anniversary" : `${yearsOfService}-Year Work Anniversary`,
+          date: target.toISOString().split("T")[0],
+          daysUntil,
+          yearsOfService,
+        });
+      }
+    }
+  }
+
+  events.sort((a, b) => a.daysUntil - b.daysUntil);
+  res.json(events);
 });
 
 export default router;
