@@ -106,19 +106,86 @@ export interface TimeEntryUpdate {
   notes?: string;
 }
 
+export type HolidayRecurrenceType = typeof HolidayRecurrenceType[keyof typeof HolidayRecurrenceType];
+
+
+export const HolidayRecurrenceType = {
+  none: 'none',
+  fixed: 'fixed',
+  nth_weekday: 'nth_weekday',
+} as const;
+
 export interface Holiday {
   id: number;
   name: string;
-  date: string;
+  /** @nullable */
+  date?: string | null;
   hoursPerDay: number;
+  recurrenceType: HolidayRecurrenceType;
+  /** @nullable */
+  recurrenceMonth?: number | null;
+  /** @nullable */
+  recurrenceDayOfMonth?: number | null;
+  /** @nullable */
+  recurrenceWeekday?: number | null;
+  /** @nullable */
+  recurrenceNth?: number | null;
+  /** @nullable */
+  resolvedCurrentYear?: string | null;
+  recurrenceLabel?: string;
   createdAt: string;
 }
+
+export type HolidayInputRecurrenceType = typeof HolidayInputRecurrenceType[keyof typeof HolidayInputRecurrenceType];
+
+
+export const HolidayInputRecurrenceType = {
+  none: 'none',
+  fixed: 'fixed',
+  nth_weekday: 'nth_weekday',
+} as const;
 
 export interface HolidayInput {
   /** @minLength 1 */
   name: string;
-  date: string;
   hoursPerDay?: number;
+  recurrenceType: HolidayInputRecurrenceType;
+  date?: string;
+  recurrenceMonth?: number;
+  recurrenceDayOfMonth?: number;
+  recurrenceWeekday?: number;
+  recurrenceNth?: number;
+}
+
+export type HolidayUpdateRecurrenceType = typeof HolidayUpdateRecurrenceType[keyof typeof HolidayUpdateRecurrenceType];
+
+
+export const HolidayUpdateRecurrenceType = {
+  none: 'none',
+  fixed: 'fixed',
+  nth_weekday: 'nth_weekday',
+} as const;
+
+export interface HolidayUpdate {
+  /** @minLength 1 */
+  name?: string;
+  hoursPerDay?: number;
+  recurrenceType?: HolidayUpdateRecurrenceType;
+  /** @nullable */
+  date?: string | null;
+  /** @nullable */
+  recurrenceMonth?: number | null;
+  /** @nullable */
+  recurrenceDayOfMonth?: number | null;
+  /** @nullable */
+  recurrenceWeekday?: number | null;
+  /** @nullable */
+  recurrenceNth?: number | null;
+}
+
+export interface SeedHolidaysResult {
+  created: number;
+  skipped: number;
 }
 
 export interface ManualTimeEntryInput {

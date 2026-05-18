@@ -5,15 +5,15 @@
  * Time Clock API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { HolidayRecurrenceType } from './holidayRecurrenceType';
+import type { HolidayUpdateRecurrenceType } from './holidayUpdateRecurrenceType';
 
-export interface Holiday {
-  id: number;
-  name: string;
+export interface HolidayUpdate {
+  /** @minLength 1 */
+  name?: string;
+  hoursPerDay?: number;
+  recurrenceType?: HolidayUpdateRecurrenceType;
   /** @nullable */
   date?: string | null;
-  hoursPerDay: number;
-  recurrenceType: HolidayRecurrenceType;
   /** @nullable */
   recurrenceMonth?: number | null;
   /** @nullable */
@@ -22,8 +22,4 @@ export interface Holiday {
   recurrenceWeekday?: number | null;
   /** @nullable */
   recurrenceNth?: number | null;
-  /** @nullable */
-  resolvedCurrentYear?: string | null;
-  recurrenceLabel?: string;
-  createdAt: string;
 }

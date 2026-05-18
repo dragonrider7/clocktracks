@@ -561,6 +561,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/Holiday"
 
+  /holidays/seed:
+    post:
+      operationId: seedHolidays
+      tags: [holidays]
+      summary: Seed US federal holidays (admin)
+      responses:
+        "200":
+          description: Seed result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeedHolidaysResult"
+
   /holidays/{id}:
     patch:
       operationId: updateHoliday
@@ -577,7 +590,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/HolidayInput"
+              $ref: "#/components/schemas/HolidayUpdate"
       responses:
         "200":
           description: Updated
@@ -732,29 +745,86 @@ components:
 
     Holiday:
       type: object
-      required: [id, name, date, hoursPerDay, createdAt]
+      required: [id, name, hoursPerDay, recurrenceType, createdAt]
       properties:
         id:
           type: integer
         name:
           type: string
         date:
-          type: string
+          type: ["string", "null"]
         hoursPerDay:
           type: integer
+        recurrenceType:
+          type: string
+          enum: [none, fixed, nth_weekday]
+        recurrenceMonth:
+          type: ["integer", "null"]
+        recurrenceDayOfMonth:
+          type: ["integer", "null"]
+        recurrenceWeekday:
+          type: ["integer", "null"]
+        recurrenceNth:
+          type: ["integer", "null"]
+        resolvedCurrentYear:
+          type: ["string", "null"]
+        recurrenceLabel:
+          type: string
         createdAt:
           type: string
 
     HolidayInput:
       type: object
-      required: [name, date]
+      required: [name, recurrenceType]
       properties:
         name:
           type: string
           minLength: 1
+        hoursPerDay:
+          type: integer
+        recurrenceType:
+          type: string
+          enum: [none, fixed, nth_weekday]
         date:
           type: string
+        recurrenceMonth:
+          type: integer
+        recurrenceDayOfMonth:
+          type: integer
+        recurrenceWeekday:
+          type: integer
+        recurrenceNth:
+          type: integer
+
+    HolidayUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
         hoursPerDay:
+          type: integer
+        recurrenceType:
+          type: string
+          enum: [none, fixed, nth_weekday]
+        date:
+          type: ["string", "null"]
+        recurrenceMonth:
+          type: ["integer", "null"]
+        recurrenceDayOfMonth:
+          type: ["integer", "null"]
+        recurrenceWeekday:
+          type: ["integer", "null"]
+        recurrenceNth:
+          type: ["integer", "null"]
+
+    SeedHolidaysResult:
+      type: object
+      required: [created, skipped]
+      properties:
+        created:
+          type: integer
+        skipped:
           type: integer
 
     ManualTimeEntryInput:

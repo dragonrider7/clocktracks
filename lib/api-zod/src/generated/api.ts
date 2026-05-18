@@ -475,8 +475,15 @@ export const GetTimesheetReportResponse = zod.array(GetTimesheetReportResponseIt
 export const ListHolidaysResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "date": zod.string(),
+  "date": zod.string().nullish(),
   "hoursPerDay": zod.number(),
+  "recurrenceType": zod.enum(['none', 'fixed', 'nth_weekday']),
+  "recurrenceMonth": zod.number().nullish(),
+  "recurrenceDayOfMonth": zod.number().nullish(),
+  "recurrenceWeekday": zod.number().nullish(),
+  "recurrenceNth": zod.number().nullish(),
+  "resolvedCurrentYear": zod.string().nullish(),
+  "recurrenceLabel": zod.string().optional(),
   "createdAt": zod.string()
 })
 export const ListHolidaysResponse = zod.array(ListHolidaysResponseItem)
@@ -490,8 +497,22 @@ export const ListHolidaysResponse = zod.array(ListHolidaysResponseItem)
 
 export const CreateHolidayBody = zod.object({
   "name": zod.string().min(1),
-  "date": zod.string(),
-  "hoursPerDay": zod.number().optional()
+  "hoursPerDay": zod.number().optional(),
+  "recurrenceType": zod.enum(['none', 'fixed', 'nth_weekday']),
+  "date": zod.string().optional(),
+  "recurrenceMonth": zod.number().optional(),
+  "recurrenceDayOfMonth": zod.number().optional(),
+  "recurrenceWeekday": zod.number().optional(),
+  "recurrenceNth": zod.number().optional()
+})
+
+
+/**
+ * @summary Seed US federal holidays (admin)
+ */
+export const SeedHolidaysResponse = zod.object({
+  "created": zod.number(),
+  "skipped": zod.number()
 })
 
 
@@ -506,16 +527,28 @@ export const UpdateHolidayParams = zod.object({
 
 
 export const UpdateHolidayBody = zod.object({
-  "name": zod.string().min(1),
-  "date": zod.string(),
-  "hoursPerDay": zod.number().optional()
+  "name": zod.string().min(1).optional(),
+  "hoursPerDay": zod.number().optional(),
+  "recurrenceType": zod.enum(['none', 'fixed', 'nth_weekday']).optional(),
+  "date": zod.string().nullish(),
+  "recurrenceMonth": zod.number().nullish(),
+  "recurrenceDayOfMonth": zod.number().nullish(),
+  "recurrenceWeekday": zod.number().nullish(),
+  "recurrenceNth": zod.number().nullish()
 })
 
 export const UpdateHolidayResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "date": zod.string(),
+  "date": zod.string().nullish(),
   "hoursPerDay": zod.number(),
+  "recurrenceType": zod.enum(['none', 'fixed', 'nth_weekday']),
+  "recurrenceMonth": zod.number().nullish(),
+  "recurrenceDayOfMonth": zod.number().nullish(),
+  "recurrenceWeekday": zod.number().nullish(),
+  "recurrenceNth": zod.number().nullish(),
+  "resolvedCurrentYear": zod.string().nullish(),
+  "recurrenceLabel": zod.string().optional(),
   "createdAt": zod.string()
 })
 

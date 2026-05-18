@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, gte, lte, and, or } from "drizzle-orm";
 import { db, timeEntriesTable, employeesTable, timeOffRequestsTable, holidaysTable } from "@workspace/db";
+import { expandHolidayInRange } from "../utils/holiday-dates.js";
 
 const router: IRouter = Router();
 
@@ -72,16 +73,7 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
           ) as ReturnType<typeof eq>
         )
       ),
-    db
-      .select()
-      .from(holidaysTable)
-      .where(
-        and(
-          gte(holidaysTable.date, reportStartStr),
-          lte(holidaysTable.date, reportEndStr)
-        )
-      )
-      .orderBy(holidaysTable.date),
+    db.select().from(holidaysTable),
   ]);
 
   type TimesheetEntry = {
@@ -182,25 +174,28 @@ router.get("/reports/timesheets", async (req, res): Promise<void> => {
     }
   }
 
-  // Company holidays — one entry per employee per holiday day
+  // Company holidays — expand recurring rules into concrete dates, one entry per employee per date
   for (const holiday of holidays) {
-    for (const emp of byEmployee.values()) {
-      const mins = holiday.hoursPerDay * 60;
-      emp.totalTimeOffMinutes += mins;
-      emp.entries.push({
-        kind: "time_off",
-        id: holiday.id,
-        employeeId: emp.employeeId,
-        employeeName: emp.employeeName,
-        date: holiday.date,
-        clockIn: null,
-        clockOut: null,
-        totalMinutes: mins,
-        notes: holiday.name,
-        createdAt: null,
-        timeOffType: "holiday",
-        timeOffRequestId: null,
-      });
+    const holidayDates = expandHolidayInRange(holiday, reportStartStr, reportEndStr);
+    for (const hDate of holidayDates) {
+      for (const emp of byEmployee.values()) {
+        const mins = holiday.hoursPerDay * 60;
+        emp.totalTimeOffMinutes += mins;
+        emp.entries.push({
+          kind: "time_off",
+          id: holiday.id,
+          employeeId: emp.employeeId,
+          employeeName: emp.employeeName,
+          date: hDate,
+          clockIn: null,
+          clockOut: null,
+          totalMinutes: mins,
+          notes: holiday.name,
+          createdAt: null,
+          timeOffType: "holiday",
+          timeOffRequestId: null,
+        });
+      }
     }
   }
 

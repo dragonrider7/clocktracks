@@ -33,11 +33,13 @@ import type {
   HealthStatus,
   Holiday,
   HolidayInput,
+  HolidayUpdate,
   ListTimeEntriesParams,
   ListTimeOffRequestsParams,
   ManualTimeEntryInput,
   OutThisWeekEntry,
   PendingRequestsCount,
+  SeedHolidaysResult,
   TimeEntry,
   TimeEntryUpdate,
   TimeOffBalance,
@@ -2096,6 +2098,76 @@ export const useCreateHoliday = <TError = ErrorType<unknown>,
       return useMutation(getCreateHolidayMutationOptions(options));
     }
 
+export const getSeedHolidaysUrl = () => {
+
+
+
+
+  return `/api/holidays/seed`
+}
+
+/**
+ * @summary Seed US federal holidays (admin)
+ */
+export const seedHolidays = async ( options?: RequestInit): Promise<SeedHolidaysResult> => {
+
+  return customFetch<SeedHolidaysResult>(getSeedHolidaysUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSeedHolidaysMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof seedHolidays>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof seedHolidays>>, TError,void, TContext> => {
+
+const mutationKey = ['seedHolidays'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof seedHolidays>>, void> = () => {
+
+
+          return  seedHolidays(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SeedHolidaysMutationResult = NonNullable<Awaited<ReturnType<typeof seedHolidays>>>
+
+    export type SeedHolidaysMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Seed US federal holidays (admin)
+ */
+export const useSeedHolidays = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof seedHolidays>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof seedHolidays>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSeedHolidaysMutationOptions(options));
+    }
+
 export const getUpdateHolidayUrl = (id: number,) => {
 
 
@@ -2108,7 +2180,7 @@ export const getUpdateHolidayUrl = (id: number,) => {
  * @summary Update a holiday (admin)
  */
 export const updateHoliday = async (id: number,
-    holidayInput: HolidayInput, options?: RequestInit): Promise<Holiday> => {
+    holidayUpdate: HolidayUpdate, options?: RequestInit): Promise<Holiday> => {
 
   return customFetch<Holiday>(getUpdateHolidayUrl(id),
   {
@@ -2116,7 +2188,7 @@ export const updateHoliday = async (id: number,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      holidayInput,)
+      holidayUpdate,)
   }
 );}
 
@@ -2124,8 +2196,8 @@ export const updateHoliday = async (id: number,
 
 
 export const getUpdateHolidayMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHoliday>>, TError,{id: number;data: BodyType<HolidayInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateHoliday>>, TError,{id: number;data: BodyType<HolidayInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHoliday>>, TError,{id: number;data: BodyType<HolidayUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateHoliday>>, TError,{id: number;data: BodyType<HolidayUpdate>}, TContext> => {
 
 const mutationKey = ['updateHoliday'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2137,7 +2209,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateHoliday>>, {id: number;data: BodyType<HolidayInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateHoliday>>, {id: number;data: BodyType<HolidayUpdate>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  updateHoliday(id,data,requestOptions)
@@ -2151,18 +2223,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateHolidayMutationResult = NonNullable<Awaited<ReturnType<typeof updateHoliday>>>
-    export type UpdateHolidayMutationBody = BodyType<HolidayInput>
+    export type UpdateHolidayMutationBody = BodyType<HolidayUpdate>
     export type UpdateHolidayMutationError = ErrorType<void>
 
     /**
  * @summary Update a holiday (admin)
  */
 export const useUpdateHoliday = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHoliday>>, TError,{id: number;data: BodyType<HolidayInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateHoliday>>, TError,{id: number;data: BodyType<HolidayUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateHoliday>>,
         TError,
-        {id: number;data: BodyType<HolidayInput>},
+        {id: number;data: BodyType<HolidayUpdate>},
         TContext
       > => {
       return useMutation(getUpdateHolidayMutationOptions(options));
