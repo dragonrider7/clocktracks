@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
@@ -19,9 +20,10 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { signOut } = useClerk();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { me, isAdmin } = useMe();
   const { theme, setTheme } = useTheme();
+  const [imgError, setImgError] = useState(false);
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
@@ -38,6 +40,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     : "?";
 
   const currentTheme = THEMES.find((t) => t.value === theme) ?? THEMES[0];
+
+  const photoUrl = isLoaded && user?.imageUrl && !imgError ? user.imageUrl : null;
+
+  const Avatar = ({ size }: { size: "sm" | "lg" }) => {
+    const dim = size === "sm" ? "h-7 w-7 text-xs" : "h-10 w-10 text-sm";
+    if (photoUrl) {
+      return (
+        <img
+          key={photoUrl}
+          src={photoUrl}
+          alt={me?.name ?? "Profile"}
+          className={`${dim} rounded-full object-cover ring-2 ring-white/30 shrink-0`}
+          onError={() => setImgError(true)}
+        />
+      );
+    }
+    return (
+      <div className={`${dim} flex items-center justify-center rounded-full bg-white/20 text-white font-semibold ring-2 ring-white/30 shrink-0`}>
+        {initials}
+      </div>
+    );
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -79,17 +103,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 data-testid="button-user-menu"
                 className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-white/10 transition-colors text-white"
               >
-                {user?.imageUrl ? (
-                  <img
-                    src={user.imageUrl}
-                    alt={me?.name ?? "Profile"}
-                    className="h-7 w-7 rounded-full object-cover ring-2 ring-white/30"
-                  />
-                ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white text-xs font-semibold ring-2 ring-white/30">
-                    {initials}
-                  </div>
-                )}
+                <Avatar size="sm" />
                 <span className="hidden sm:block">{me?.name ?? "Loading..."}</span>
                 {isAdmin && (
                   <span className="hidden sm:block text-xs bg-white/20 text-white px-1.5 py-0.5 rounded">
@@ -99,24 +113,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <ChevronDown className="h-3.5 w-3.5 text-white/70" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                {me?.email ?? me?.department ?? ""}
+            <DropdownMenuContent align="end" className="w-56">
+              {/* Profile header */}
+              <div
+                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/60 rounded-sm transition-colors"
+                onClick={() => setLocation("/profile")}
+              >
+                <Avatar size="lg" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{me?.name ?? "..."}</p>
+                  <p className="text-xs text-muted-foreground truncate">{me?.email ?? me?.department ?? ""}</p>
+                </div>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setLocation("/profile")}
                 className="cursor-pointer gap-2"
               >
-                {user?.imageUrl ? (
-                  <img
-                    src={user.imageUrl}
-                    alt=""
-                    className="h-4 w-4 rounded-full object-cover"
-                  />
-                ) : (
-                  <UserCircle className="h-4 w-4" />
-                )}
+                <UserCircle className="h-4 w-4" />
                 My Profile
               </DropdownMenuItem>
               <DropdownMenuSub>
