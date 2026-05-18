@@ -3,13 +3,22 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Time Clock API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: employees
+    description: Employee management
+  - name: timeEntries
+    description: Time clock entries
+  - name: timeOffRequests
+    description: Vacation and time off requests
+  - name: dashboard
+    description: Dashboard and summary endpoints
+
 paths:
   /healthz:
     get:
@@ -24,6 +33,377 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List all employees
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create a new employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeInput"
+      responses:
+        "201":
+          description: Created employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "400":
+          description: Invalid input
+
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get employee by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeUpdate"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /time-entries:
+    get:
+      operationId: listTimeEntries
+      tags: [timeEntries]
+      summary: List time entries
+      parameters:
+        - name: employeeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of time entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeEntry"
+
+  /time-entries/clock-in:
+    post:
+      operationId: clockIn
+      tags: [timeEntries]
+      summary: Clock an employee in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClockInInput"
+      responses:
+        "201":
+          description: Clocked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+        "400":
+          description: Already clocked in or invalid
+
+  /time-entries/{id}/clock-out:
+    patch:
+      operationId: clockOut
+      tags: [timeEntries]
+      summary: Clock an employee out
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClockOutInput"
+      responses:
+        "200":
+          description: Clocked out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+        "400":
+          description: Not clocked in
+        "404":
+          description: Entry not found
+
+  /time-entries/{id}:
+    patch:
+      operationId: updateTimeEntry
+      tags: [timeEntries]
+      summary: Update/edit a time entry (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeEntryUpdate"
+      responses:
+        "200":
+          description: Updated entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTimeEntry
+      tags: [timeEntries]
+      summary: Delete a time entry (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /time-off-requests:
+    get:
+      operationId: listTimeOffRequests
+      tags: [timeOffRequests]
+      summary: List time off requests
+      parameters:
+        - name: employeeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, denied]
+      responses:
+        "200":
+          description: List of time off requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeOffRequest"
+    post:
+      operationId: createTimeOffRequest
+      tags: [timeOffRequests]
+      summary: Submit a time off request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeOffRequestInput"
+      responses:
+        "201":
+          description: Created request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeOffRequest"
+        "400":
+          description: Invalid input
+
+  /time-off-requests/{id}:
+    get:
+      operationId: getTimeOffRequest
+      tags: [timeOffRequests]
+      summary: Get a time off request by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Time off request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeOffRequest"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTimeOffRequest
+      tags: [timeOffRequests]
+      summary: Delete a time off request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /time-off-requests/{id}/review:
+    patch:
+      operationId: reviewTimeOffRequest
+      tags: [timeOffRequests]
+      summary: Approve or deny a time off request (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeOffReview"
+      responses:
+        "200":
+          description: Reviewed request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeOffRequest"
+        "400":
+          description: Invalid status
+        "404":
+          description: Not found
+
+  /dashboard/current-status:
+    get:
+      operationId: getDashboardStatus
+      tags: [dashboard]
+      summary: Get current clocked-in employees and today stats
+      responses:
+        "200":
+          description: Dashboard status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStatus"
+
+  /dashboard/weekly-hours:
+    get:
+      operationId: getWeeklyHours
+      tags: [dashboard]
+      summary: Get hours worked per employee for current week
+      responses:
+        "200":
+          description: Weekly hours per employee
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeWeeklyHours"
+
+  /dashboard/pending-requests:
+    get:
+      operationId: getPendingRequests
+      tags: [dashboard]
+      summary: Get count of pending time off requests
+      responses:
+        "200":
+          description: Pending count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingRequestsCount"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +414,212 @@ components:
       required:
         - status
 
+    Employee:
+      type: object
+      required: [id, name, role, department, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        pin:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [employee, admin]
+        department:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    EmployeeInput:
+      type: object
+      required: [name, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        pin:
+          type: string
+        role:
+          type: string
+          enum: [employee, admin]
+        department:
+          type: string
+        email:
+          type: string
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        pin:
+          type: string
+        role:
+          type: string
+          enum: [employee, admin]
+        department:
+          type: string
+        email:
+          type: string
+
+    TimeEntry:
+      type: object
+      required: [id, employeeId, clockIn, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        clockIn:
+          type: string
+        clockOut:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        totalMinutes:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    ClockInInput:
+      type: object
+      required: [employeeId]
+      properties:
+        employeeId:
+          type: integer
+        notes:
+          type: string
+
+    ClockOutInput:
+      type: object
+      properties:
+        notes:
+          type: string
+
+    TimeEntryUpdate:
+      type: object
+      properties:
+        clockIn:
+          type: string
+        clockOut:
+          type: string
+        notes:
+          type: string
+
+    TimeOffRequest:
+      type: object
+      required: [id, employeeId, type, startDate, endDate, status, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [vacation, sick, personal, other]
+        startDate:
+          type: string
+        endDate:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, denied]
+        notes:
+          type: ["string", "null"]
+        reviewedBy:
+          type: ["integer", "null"]
+        reviewedByName:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    TimeOffRequestInput:
+      type: object
+      required: [employeeId, type, startDate, endDate]
+      properties:
+        employeeId:
+          type: integer
+        type:
+          type: string
+          enum: [vacation, sick, personal, other]
+        startDate:
+          type: string
+        endDate:
+          type: string
+        notes:
+          type: string
+
+    TimeOffReview:
+      type: object
+      required: [status, reviewedBy]
+      properties:
+        status:
+          type: string
+          enum: [approved, denied]
+        reviewedBy:
+          type: integer
+        notes:
+          type: string
+
+    DashboardStatus:
+      type: object
+      required: [clockedInCount, totalEmployees, clockedInEmployees, todayTotalHours]
+      properties:
+        clockedInCount:
+          type: integer
+        totalEmployees:
+          type: integer
+        todayTotalHours:
+          type: number
+        clockedInEmployees:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClockedInEmployee"
+
+    ClockedInEmployee:
+      type: object
+      required: [employeeId, employeeName, clockIn, timeEntryId]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        department:
+          type: ["string", "null"]
+        clockIn:
+          type: string
+        timeEntryId:
+          type: integer
+
+    EmployeeWeeklyHours:
+      type: object
+      required: [employeeId, employeeName, totalMinutes, daysWorked]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        department:
+          type: ["string", "null"]
+        totalMinutes:
+          type: integer
+        daysWorked:
+          type: integer
+
+    PendingRequestsCount:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer

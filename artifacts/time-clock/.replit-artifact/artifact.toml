@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Time Clock"
+version = "1.0.0"
+id = "artifacts/time-clock"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18644
+
+[services.development]
+run = "pnpm --filter @workspace/time-clock run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/time-clock", "run", "build" ]
+publicDir = "artifacts/time-clock/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18644"
+BASE_PATH = "/"

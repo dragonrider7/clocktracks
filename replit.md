@@ -1,10 +1,11 @@
-# [Project name]
+# TimeClock
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A time clock web application for small teams (10-15 employees) to track daily clock in/out times, view who is currently working, and manage vacation and time off requests.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @workspace/time-clock run dev` — run the frontend (port 18644)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -14,6 +15,7 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React + Vite + Tailwind CSS + shadcn/ui + wouter routing
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,15 +24,26 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — OpenAPI contract (source of truth)
+- `lib/db/src/schema/` — Drizzle table definitions (employees, timeEntries, timeOffRequests)
+- `artifacts/api-server/src/routes/` — Express route handlers
+- `artifacts/time-clock/src/` — React frontend (pages, components)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Contract-first OpenAPI: all types flow from the spec → codegen → frontend hooks + server Zod schemas
+- No authentication: employees select their name from a list to clock in (simple, kiosk-friendly)
+- Role system: `employee` vs `admin` stored on the Employee record; UI differentiates admin actions
+- Dashboard aggregates computed server-side: who's in, weekly hours, pending requests count
+- Time entries track clockIn/clockOut as timestamps; totalMinutes computed on the fly in route handlers
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Dashboard** — live view of who's clocked in, today's hours, pending time off requests, weekly hours per employee
+- **Clock In/Out** — one-click clock in/out by selecting an employee name
+- **Employees** — admin CRUD for managing employee records (name, department, role, PIN, email)
+- **Time Log** — filterable table of all time entries; admins can edit or delete entries
+- **Time Off** — calendar + list of vacation/sick/personal requests; admins can approve or deny
 
 ## User preferences
 
@@ -38,7 +51,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run `pnpm --filter @workspace/api-spec run codegen` after changing `openapi.yaml`
+- Google Fonts `@import url(...)` must be the very first line of `index.css` (before all other imports)
+- Clock-out route is `PATCH /time-entries/:id/clock-out` (not `/time-entries/clock-out/:id`)
 
 ## Pointers
 
