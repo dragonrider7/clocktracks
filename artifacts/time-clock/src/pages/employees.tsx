@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Redirect } from "wouter";
 import { useMe } from "@/App";
+import { EmployeeAvatar } from "@/components/employee-avatar";
 
 export default function Employees() {
   const { isAdmin, isLoading: meLoading } = useMe();
@@ -146,7 +147,7 @@ export default function Employees() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Employee</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Role</TableHead>
@@ -157,14 +158,17 @@ export default function Employees() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Loading...
-                </TableCell>
+                <TableCell colSpan={6} className="text-center">Loading...</TableCell>
               </TableRow>
             ) : (
               employees?.map((emp) => (
                 <TableRow key={emp.id} data-testid={`row-employee-${emp.id}`}>
-                  <TableCell className="font-medium">{emp.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <EmployeeAvatar name={emp.name} size="sm" />
+                      <span className="font-medium">{emp.name}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{emp.email || "—"}</TableCell>
                   <TableCell>{emp.department || "—"}</TableCell>
                   <TableCell>
@@ -226,7 +230,6 @@ export default function Employees() {
         </Table>
       </CardContent>
 
-      {/* Edit Dialog */}
       <Dialog open={!!editEmp} onOpenChange={(open) => !open && setEditEmp(null)}>
         <DialogContent>
           <DialogHeader>

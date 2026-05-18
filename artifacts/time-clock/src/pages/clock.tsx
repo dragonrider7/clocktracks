@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, LogIn, LogOut } from "lucide-react";
 import { useMe } from "@/App";
+import { EmployeeAvatar } from "@/components/employee-avatar";
 
 export default function ClockPage() {
   const { me, isAdmin } = useMe();
@@ -28,11 +29,11 @@ export default function ClockPage() {
   const effectiveEmployeeId = isAdmin ? selectedEmployeeId : me?.id ?? null;
 
   const isClockedIn = status?.clockedInEmployees?.some(
-    (e) => e.employeeId === effectiveEmployeeId
+    (e) => e.employeeId === effectiveEmployeeId,
   );
 
   const activeEntry = status?.clockedInEmployees?.find(
-    (e) => e.employeeId === effectiveEmployeeId
+    (e) => e.employeeId === effectiveEmployeeId,
   );
 
   const invalidate = () => {
@@ -52,7 +53,7 @@ export default function ClockPage() {
         onError: () => {
           toast({ title: "Already clocked in", variant: "destructive" });
         },
-      }
+      },
     );
   };
 
@@ -65,7 +66,7 @@ export default function ClockPage() {
           toast({ title: "Clocked out successfully" });
           invalidate();
         },
-      }
+      },
     );
   };
 
@@ -74,7 +75,9 @@ export default function ClockPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
+            <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-white" />
+            </div>
             Clock In / Out
           </CardTitle>
         </CardHeader>
@@ -87,23 +90,27 @@ export default function ClockPage() {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {employees?.map((emp) => {
                   const active = status?.clockedInEmployees?.some((e) => e.employeeId === emp.id);
+                  const selected = selectedEmployeeId === emp.id;
                   return (
                     <button
                       key={emp.id}
                       data-testid={`button-employee-${emp.id}`}
                       onClick={() => setSelectedEmployeeId(emp.id)}
-                      className={`rounded-xl border px-4 py-3 text-left transition-all ${
-                        selectedEmployeeId === emp.id
+                      className={`rounded-xl border px-3 py-3 text-left transition-all ${
+                        selected
                           ? "border-primary bg-primary/5 ring-1 ring-primary"
                           : "border-border bg-card hover:bg-muted"
                       }`}
                     >
-                      <div className="font-medium text-sm">{emp.name}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <EmployeeAvatar name={emp.name} size="sm" />
+                        <div className="font-medium text-sm truncate">{emp.name}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground pl-10">
                         {emp.department ?? emp.role}
                       </div>
                       {active && (
-                        <span className="mt-1.5 inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                        <span className="mt-1.5 ml-10 inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
                           Clocked in
                         </span>
                       )}
@@ -114,16 +121,9 @@ export default function ClockPage() {
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-xl border p-4 bg-muted/30">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                {me?.name
-                  ?.split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </div>
+              <EmployeeAvatar name={me?.name ?? "?"} size="md" />
               <div>
-                <div className="font-medium">{me?.name}</div>
+                <div className="font-semibold">{me?.name}</div>
                 <div className="text-sm text-muted-foreground">{me?.department ?? me?.role}</div>
               </div>
             </div>
@@ -131,18 +131,24 @@ export default function ClockPage() {
 
           {effectiveEmployeeId && (
             <div className="space-y-3">
-              <div className="rounded-xl border p-4 bg-muted/30">
+              <div
+                className={`rounded-xl border p-4 ${
+                  isClockedIn
+                    ? "bg-green-50 border-green-200"
+                    : "bg-muted/30"
+                }`}
+              >
                 <div className="text-sm text-muted-foreground mb-1">Current status</div>
                 {statusLoading ? (
                   <div className="text-sm text-muted-foreground">Loading...</div>
                 ) : isClockedIn ? (
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="font-semibold text-green-700">Clocked In</span>
+                      <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="font-bold text-green-700">Clocked In</span>
                     </div>
                     {activeEntry && (
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-sm text-green-600 mt-1">
                         Since{" "}
                         {new Date(activeEntry.clockIn).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -153,7 +159,7 @@ export default function ClockPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground" />
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground" />
                     <span className="text-muted-foreground font-medium">Not clocked in</span>
                   </div>
                 )}
@@ -165,9 +171,9 @@ export default function ClockPage() {
                   disabled={isClockedIn || clockInMutation.isPending || !effectiveEmployeeId}
                   onClick={handleClockIn}
                   data-testid="button-clock-in"
-                  className="h-14"
+                  className="h-14 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  <LogIn className="w-5 h-5 mr-2" />
+                  <LogIn className="w-5 h-5" />
                   Clock In
                 </Button>
                 <Button
@@ -176,9 +182,9 @@ export default function ClockPage() {
                   disabled={!isClockedIn || clockOutMutation.isPending}
                   onClick={handleClockOut}
                   data-testid="button-clock-out"
-                  className="h-14"
+                  className="h-14 gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                 >
-                  <LogOut className="w-5 h-5 mr-2" />
+                  <LogOut className="w-5 h-5" />
                   Clock Out
                 </Button>
               </div>
@@ -195,7 +201,10 @@ export default function ClockPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Currently Clocked In</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            Currently Clocked In
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {statusLoading ? (
@@ -205,12 +214,15 @@ export default function ClockPage() {
               No one is currently clocked in.
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="space-y-2">
               {status?.clockedInEmployees?.map((e) => (
-                <div key={e.employeeId} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="font-medium text-sm">{e.employeeName}</div>
-                    <div className="text-xs text-muted-foreground">{e.department ?? ""}</div>
+                <div key={e.employeeId} className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <EmployeeAvatar name={e.employeeName} size="sm" />
+                    <div>
+                      <div className="font-medium text-sm">{e.employeeName}</div>
+                      <div className="text-xs text-muted-foreground">{e.department ?? ""}</div>
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Since{" "}
