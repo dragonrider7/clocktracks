@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: me
+    description: Current authenticated user
   - name: employees
     description: Employee management
   - name: timeEntries
@@ -20,6 +22,21 @@ tags:
     description: Dashboard and summary endpoints
 
 paths:
+  /me:
+    get:
+      operationId: getMe
+      tags: [me]
+      summary: Get current user's employee profile (JIT-provisions if needed)
+      responses:
+        "200":
+          description: Current user employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "401":
+          description: Unauthenticated
+
   /healthz:
     get:
       operationId: healthCheck

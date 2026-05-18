@@ -9,6 +9,20 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Get current user's employee profile (JIT-provisions if needed)
+ */
+export const GetMeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "pin": zod.string().nullish(),
+  "role": zod.enum(['employee', 'admin']),
+  "department": zod.string().nullable(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

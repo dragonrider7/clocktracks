@@ -45,6 +45,17 @@ A time clock web application for small teams (10-15 employees) to track daily cl
 - **Time Log** — filterable table of all time entries; admins can edit or delete entries
 - **Time Off** — calendar + list of vacation/sick/personal requests; admins can approve or deny
 
+## Authentication
+
+- Auth provider: Clerk (Replit-managed, keys auto-provisioned)
+- Login methods: email/password + Google (configured in Auth pane)
+- **First user to create an account becomes admin.** Subsequent sign-ups become employees.
+- Linking: when a user signs in, their Clerk account is linked to their employee record by email match, then by `clerkUserId`. If no match, a new employee record is created.
+- Admin capabilities: manage employees, approve/deny time off, edit/delete time entries, clock in/out on behalf of others
+- Employee capabilities: clock in/out for themselves, request time off, view their own time log
+- The "Employees" nav item is hidden from non-admin users
+- `clerkUserId` column is stored on the employees table (partial unique index, null-safe)
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._

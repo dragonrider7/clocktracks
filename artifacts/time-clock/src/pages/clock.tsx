@@ -1,90 +1,226 @@
 import { useState } from "react";
-import { useListEmployees, useListTimeEntries, useClockIn, useClockOut, getListTimeEntriesQueryKey, getGetDashboardStatusQueryKey } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  useListEmployees,
+  useClockIn,
+  useClockOut,
+  useGetDashboardStatus,
+  getGetDashboardStatusQueryKey,
+  getListTimeEntriesQueryKey,
+} from "@workspace/api-client-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { Clock, LogIn, LogOut } from "lucide-react";
+import { useMe } from "@/App";
 
-export default function Clock() {
-  const [selectedEmployee, setSelectedEmployee] = useState<string>("");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: employees, isLoading: loadingEmployees } = useListEmployees();
-  
-  // Get today's open entries for the selected employee to know if they are clocked in
-  const { data: recentEntries } = useListTimeEntries(
-    { employeeId: selectedEmployee ? parseInt(selectedEmployee) : undefined },
-    { query: { enabled: !!selectedEmployee } }
-  );
-
-  const activeEntry = recentEntries?.find(e => !e.clockOut);
-  const isClockedIn = !!activeEntry;
-
+export default function ClockPage() {
+  const { me, isAdmin } = useMe();
+  const { data: employees } = useListEmployees();
+  const { data: status, isLoading: statusLoading } = useGetDashboardStatus();
   const clockInMutation = useClockIn();
   const clockOutMutation = useClockOut();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const handleClockAction = () => {
-    if (!selectedEmployee) return;
-    const empId = parseInt(selectedEmployee);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
-    if (isClockedIn && activeEntry) {
-      clockOutMutation.mutate({ id: activeEntry.id, data: {} }, {
+  const effectiveEmployeeId = isAdmin ? selectedEmployeeId : me?.id ?? null;
+
+  const isClockedIn = status?.clockedInEmployees?.some(
+    (e) => e.employeeId === effectiveEmployeeId
+  );
+
+  const activeEntry = status?.clockedInEmployees?.find(
+    (e) => e.employeeId === effectiveEmployeeId
+  );
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getGetDashboardStatusQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListTimeEntriesQueryKey() });
+  };
+
+  const handleClockIn = () => {
+    if (!effectiveEmployeeId) return;
+    clockInMutation.mutate(
+      { data: { employeeId: effectiveEmployeeId } },
+      {
         onSuccess: () => {
-          toast({ title: "Clocked Out Successfully", description: "Your time has been recorded." });
-          queryClient.invalidateQueries({ queryKey: getListTimeEntriesQueryKey({ employeeId: empId }) });
-          queryClient.invalidateQueries({ queryKey: getGetDashboardStatusQueryKey() });
-        }
-      });
-    } else {
-      clockInMutation.mutate({ data: { employeeId: empId } }, {
+          toast({ title: "Clocked in successfully" });
+          invalidate();
+        },
+        onError: () => {
+          toast({ title: "Already clocked in", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleClockOut = () => {
+    if (!activeEntry) return;
+    clockOutMutation.mutate(
+      { id: activeEntry.timeEntryId, data: {} },
+      {
         onSuccess: () => {
-          toast({ title: "Clocked In Successfully", description: "Have a great shift!" });
-          queryClient.invalidateQueries({ queryKey: getListTimeEntriesQueryKey({ employeeId: empId }) });
-          queryClient.invalidateQueries({ queryKey: getGetDashboardStatusQueryKey() });
-        }
-      });
-    }
+          toast({ title: "Clocked out successfully" });
+          invalidate();
+        },
+      }
+    );
   };
 
   return (
-    <div className="max-w-md mx-auto mt-12">
-      <Card className="text-center shadow-lg border-primary/10">
-        <CardHeader className="space-y-4 pb-8">
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary">Time Clock</CardTitle>
-          <CardDescription className="text-lg">Select your name and clock in or out.</CardDescription>
+    <div className="max-w-xl mx-auto space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Clock In / Out
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <Select value={selectedEmployee} onValueChange={setSelectedEmployee} disabled={loadingEmployees}>
-            <SelectTrigger className="w-full h-14 text-lg">
-              <SelectValue placeholder="Select your name..." />
-            </SelectTrigger>
-            <SelectContent>
-              {employees?.map((emp) => (
-                <SelectItem key={emp.id} value={emp.id.toString()} className="text-lg py-3">
-                  {emp.name}
-                </SelectItem>
+        <CardContent className="space-y-6">
+          {isAdmin ? (
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                Select Employee
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {employees?.map((emp) => {
+                  const active = status?.clockedInEmployees?.some((e) => e.employeeId === emp.id);
+                  return (
+                    <button
+                      key={emp.id}
+                      data-testid={`button-employee-${emp.id}`}
+                      onClick={() => setSelectedEmployeeId(emp.id)}
+                      className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                        selectedEmployeeId === emp.id
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-border bg-card hover:bg-muted"
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{emp.name}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {emp.department ?? emp.role}
+                      </div>
+                      {active && (
+                        <span className="mt-1.5 inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                          Clocked in
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-xl border p-4 bg-muted/30">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                {me?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+              <div>
+                <div className="font-medium">{me?.name}</div>
+                <div className="text-sm text-muted-foreground">{me?.department ?? me?.role}</div>
+              </div>
+            </div>
+          )}
+
+          {effectiveEmployeeId && (
+            <div className="space-y-3">
+              <div className="rounded-xl border p-4 bg-muted/30">
+                <div className="text-sm text-muted-foreground mb-1">Current status</div>
+                {statusLoading ? (
+                  <div className="text-sm text-muted-foreground">Loading...</div>
+                ) : isClockedIn ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="font-semibold text-green-700">Clocked In</span>
+                    </div>
+                    {activeEntry && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Since{" "}
+                        {new Date(activeEntry.clockIn).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground" />
+                    <span className="text-muted-foreground font-medium">Not clocked in</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  size="lg"
+                  disabled={isClockedIn || clockInMutation.isPending || !effectiveEmployeeId}
+                  onClick={handleClockIn}
+                  data-testid="button-clock-in"
+                  className="h-14"
+                >
+                  <LogIn className="w-5 h-5 mr-2" />
+                  Clock In
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  disabled={!isClockedIn || clockOutMutation.isPending}
+                  onClick={handleClockOut}
+                  data-testid="button-clock-out"
+                  className="h-14"
+                >
+                  <LogOut className="w-5 h-5 mr-2" />
+                  Clock Out
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && !effectiveEmployeeId && (
+            <p className="text-center text-sm text-muted-foreground py-4">
+              Select an employee above to clock them in or out.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Currently Clocked In</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {statusLoading ? (
+            <div className="text-sm text-muted-foreground">Loading...</div>
+          ) : (status?.clockedInEmployees?.length ?? 0) === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              No one is currently clocked in.
+            </div>
+          ) : (
+            <div className="divide-y">
+              {status?.clockedInEmployees?.map((e) => (
+                <div key={e.employeeId} className="flex items-center justify-between py-3">
+                  <div>
+                    <div className="font-medium text-sm">{e.employeeName}</div>
+                    <div className="text-xs text-muted-foreground">{e.department ?? ""}</div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Since{" "}
+                    {new Date(e.clockIn).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
               ))}
-            </SelectContent>
-          </Select>
-
-          <Button 
-            size="lg" 
-            className={`w-full h-24 text-2xl font-bold transition-all shadow-md ${isClockedIn ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
-            disabled={!selectedEmployee || clockInMutation.isPending || clockOutMutation.isPending}
-            onClick={handleClockAction}
-          >
-            {isClockedIn ? "CLOCK OUT" : "CLOCK IN"}
-          </Button>
-
-          {selectedEmployee && (
-            <div className="text-sm text-muted-foreground pt-4">
-              {isClockedIn ? (
-                <span>You clocked in at {new Date(activeEntry.clockIn).toLocaleTimeString()}</span>
-              ) : (
-                <span>You are currently clocked out</span>
-              )}
             </div>
           )}
         </CardContent>
