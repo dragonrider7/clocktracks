@@ -98,12 +98,54 @@ export interface TimeEntryUpdate {
   notes?: string;
 }
 
+export interface ManualTimeEntryInput {
+  employeeId: number;
+  clockIn: string;
+  clockOut?: string;
+  notes?: string;
+}
+
+export type TimesheetEntryKind = typeof TimesheetEntryKind[keyof typeof TimesheetEntryKind];
+
+
+export const TimesheetEntryKind = {
+  work: 'work',
+  time_off: 'time_off',
+} as const;
+
+export interface TimesheetEntry {
+  kind: TimesheetEntryKind;
+  /** @nullable */
+  id?: number | null;
+  employeeId: number;
+  /** @nullable */
+  employeeName?: string | null;
+  /** @nullable */
+  date?: string | null;
+  /** @nullable */
+  clockIn?: string | null;
+  /** @nullable */
+  clockOut?: string | null;
+  /** @nullable */
+  totalMinutes?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+  /** @nullable */
+  timeOffType?: string | null;
+  /** @nullable */
+  timeOffRequestId?: number | null;
+}
+
 export type TimeOffRequestType = typeof TimeOffRequestType[keyof typeof TimeOffRequestType];
 
 
 export const TimeOffRequestType = {
   vacation: 'vacation',
+  pto: 'pto',
   sick: 'sick',
+  bereavement: 'bereavement',
   personal: 'personal',
   other: 'other',
 } as const;
@@ -142,7 +184,9 @@ export type TimeOffRequestInputType = typeof TimeOffRequestInputType[keyof typeo
 
 export const TimeOffRequestInputType = {
   vacation: 'vacation',
+  pto: 'pto',
   sick: 'sick',
+  bereavement: 'bereavement',
   personal: 'personal',
   other: 'other',
 } as const;
@@ -203,7 +247,9 @@ export type OutThisWeekEntryType = typeof OutThisWeekEntryType[keyof typeof OutT
 
 export const OutThisWeekEntryType = {
   vacation: 'vacation',
+  pto: 'pto',
   sick: 'sick',
+  bereavement: 'bereavement',
   personal: 'personal',
   other: 'other',
 } as const;
@@ -237,7 +283,8 @@ export interface EmployeeTimesheet {
   /** @nullable */
   department?: string | null;
   totalMinutes: number;
-  entries: TimeEntry[];
+  totalTimeOffMinutes: number;
+  entries: TimesheetEntry[];
 }
 
 export type ListTimeEntriesParams = {

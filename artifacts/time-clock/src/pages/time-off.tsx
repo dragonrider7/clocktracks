@@ -19,11 +19,24 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMe } from "@/App";
 
+type TimeOffType = "vacation" | "pto" | "sick" | "bereavement" | "personal" | "other";
+
+const TYPE_LABELS: Record<string, string> = {
+  vacation: "Vacation",
+  pto: "PTO",
+  sick: "Sick Day",
+  bereavement: "Bereavement",
+  personal: "Personal",
+  other: "Other",
+};
+
 const TYPE_COLORS: Record<string, string> = {
   vacation: "bg-blue-100 text-blue-800 border-blue-200",
+  pto: "bg-sky-100 text-sky-800 border-sky-200",
   sick: "bg-red-100 text-red-800 border-red-200",
+  bereavement: "bg-gray-100 text-gray-800 border-gray-300",
   personal: "bg-purple-100 text-purple-800 border-purple-200",
-  other: "bg-gray-100 text-gray-700 border-gray-200",
+  other: "bg-zinc-100 text-zinc-700 border-zinc-200",
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -80,7 +93,7 @@ function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
               </span>
               <div className="mt-0.5 space-y-0.5">
                 {dayRequests.slice(0, 3).map((req) => (
-                  <div key={req.id} title={`${req.employeeName ?? "Employee"} — ${req.type} (${req.status})`}
+                  <div key={req.id} title={`${req.employeeName ?? "Employee"} — ${TYPE_LABELS[req.type] ?? req.type} (${req.status})`}
                     className={`flex items-center gap-1 rounded text-[10px] leading-tight px-1 py-0.5 border truncate ${TYPE_COLORS[req.type] ?? TYPE_COLORS.other}`}>
                     <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[req.status] ?? "bg-gray-400"}`} />
                     <span className="truncate">{req.employeeName?.split(" ")[0] ?? "?"}</span>
@@ -92,12 +105,10 @@ function CalendarView({ requests }: { requests: TimeOffRequest[] }) {
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-3 pt-1">
+      <div className="flex flex-wrap gap-2 pt-1">
         {Object.entries(TYPE_COLORS).map(([type, cls]) => (
-          <span key={type} className={`text-xs px-2 py-0.5 rounded border capitalize ${cls}`}>{type}</span>
+          <span key={type} className={`text-xs px-2 py-0.5 rounded border ${cls}`}>{TYPE_LABELS[type] ?? type}</span>
         ))}
-        <span className="text-xs text-muted-foreground flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" /> Approved</span>
-        <span className="text-xs text-muted-foreground flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" /> Pending</span>
       </div>
     </div>
   );
@@ -115,7 +126,7 @@ function BalanceWidget({ employeeId }: { employeeId: number | undefined }) {
   );
   const b = balances?.[0];
 
-  if (isLoading) return <div className="h-20 animate-pulse bg-muted rounded-xl" />;
+  if (isLoading) return <div className="h-16 animate-pulse bg-muted rounded-xl" />;
   if (!b) return null;
 
   const allotted = b.allottedHours;
@@ -164,6 +175,14 @@ function BalanceWidget({ employeeId }: { employeeId: number | undefined }) {
   );
 }
 
+function TypeBadge({ type }: { type: string }) {
+  return (
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs border ${TYPE_COLORS[type] ?? TYPE_COLORS.other}`}>
+      {TYPE_LABELS[type] ?? type}
+    </span>
+  );
+}
+
 export default function TimeOff() {
   const { data: requests, isLoading } = useListTimeOffRequests();
   const { data: employees } = useListEmployees();
@@ -177,7 +196,7 @@ export default function TimeOff() {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [newRequest, setNewRequest] = useState({
     employeeId: "",
-    type: "vacation" as "vacation" | "sick" | "personal" | "other",
+    type: "pto" as TimeOffType,
     startDate: "",
     endDate: "",
     notes: "",
@@ -205,7 +224,7 @@ export default function TimeOff() {
         onSuccess: () => {
           toast({ title: "Time off request submitted" });
           setIsRequestOpen(false);
-          setNewRequest({ employeeId: "", type: "vacation", startDate: "", endDate: "", notes: "" });
+          setNewRequest({ employeeId: "", type: "pto", startDate: "", endDate: "", notes: "" });
           queryClient.invalidateQueries({ queryKey: getListTimeOffRequestsQueryKey() });
         },
       }
@@ -244,11 +263,13 @@ export default function TimeOff() {
           )}
           <div>
             <label className="text-sm font-medium">Type</label>
-            <Select value={newRequest.type} onValueChange={(v: typeof newRequest.type) => setNewRequest({ ...newRequest, type: v })}>
+            <Select value={newRequest.type} onValueChange={(v: TimeOffType) => setNewRequest({ ...newRequest, type: v })}>
               <SelectTrigger data-testid="select-type"><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="pto">PTO (Paid Time Off)</SelectItem>
                 <SelectItem value="vacation">Vacation</SelectItem>
-                <SelectItem value="sick">Sick</SelectItem>
+                <SelectItem value="sick">Sick Day</SelectItem>
+                <SelectItem value="bereavement">Bereavement</SelectItem>
                 <SelectItem value="personal">Personal</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
@@ -297,7 +318,8 @@ export default function TimeOff() {
         </CardHeader>
         <CardContent>
           {view === "calendar" ? (
-            isLoading ? <div className="h-96 flex items-center justify-center text-muted-foreground text-sm">Loading...</div> : <CalendarView requests={calendarRequests} />
+            isLoading ? <div className="h-96 flex items-center justify-center text-muted-foreground text-sm">Loading...</div>
+              : <CalendarView requests={calendarRequests} />
           ) : (
             <Table>
               <TableHeader>
@@ -324,8 +346,8 @@ export default function TimeOff() {
                     return (
                       <TableRow key={req.id} data-testid={`row-request-${req.id}`}>
                         {isAdmin && <TableCell className="font-medium">{req.employeeName}</TableCell>}
-                        <TableCell className="capitalize">{req.type}</TableCell>
-                        <TableCell>{req.startDate} – {req.endDate}</TableCell>
+                        <TableCell><TypeBadge type={req.type} /></TableCell>
+                        <TableCell className="text-sm">{req.startDate === req.endDate ? req.startDate : `${req.startDate} – ${req.endDate}`}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{days}d / {days * 8}h</TableCell>
                         <TableCell>{getStatusBadge(req.status)}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{req.notes || "—"}</TableCell>

@@ -145,6 +145,17 @@ export const ListTimeEntriesResponse = zod.array(ListTimeEntriesResponseItem)
 
 
 /**
+ * @summary Manually create a past time entry (admin)
+ */
+export const CreateTimeEntryBody = zod.object({
+  "employeeId": zod.number(),
+  "clockIn": zod.string(),
+  "clockOut": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
  * @summary Clock an employee in
  */
 export const ClockInBody = zod.object({
@@ -221,7 +232,7 @@ export const ListTimeOffRequestsResponseItem = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'other']),
+  "type": zod.enum(['vacation', 'pto', 'sick', 'bereavement', 'personal', 'other']),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "status": zod.enum(['pending', 'approved', 'denied']),
@@ -239,7 +250,7 @@ export const ListTimeOffRequestsResponse = zod.array(ListTimeOffRequestsResponse
  */
 export const CreateTimeOffRequestBody = zod.object({
   "employeeId": zod.number(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'other']),
+  "type": zod.enum(['vacation', 'pto', 'sick', 'bereavement', 'personal', 'other']),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "notes": zod.string().optional()
@@ -257,7 +268,7 @@ export const GetTimeOffRequestResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'other']),
+  "type": zod.enum(['vacation', 'pto', 'sick', 'bereavement', 'personal', 'other']),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "status": zod.enum(['pending', 'approved', 'denied']),
@@ -294,7 +305,7 @@ export const ReviewTimeOffRequestResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'other']),
+  "type": zod.enum(['vacation', 'pto', 'sick', 'bereavement', 'personal', 'other']),
   "startDate": zod.string(),
   "endDate": zod.string(),
   "status": zod.enum(['pending', 'approved', 'denied']),
@@ -352,7 +363,7 @@ export const GetOutThisWeekResponseItem = zod.object({
   "employeeId": zod.number(),
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'other']),
+  "type": zod.enum(['vacation', 'pto', 'sick', 'bereavement', 'personal', 'other']),
   "startDate": zod.string(),
   "endDate": zod.string()
 })
@@ -393,15 +404,20 @@ export const GetTimesheetReportResponseItem = zod.object({
   "employeeName": zod.string(),
   "department": zod.string().nullish(),
   "totalMinutes": zod.number(),
+  "totalTimeOffMinutes": zod.number(),
   "entries": zod.array(zod.object({
-  "id": zod.number(),
+  "kind": zod.enum(['work', 'time_off']),
+  "id": zod.number().nullish(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
-  "clockIn": zod.string(),
+  "date": zod.string().nullish(),
+  "clockIn": zod.string().nullish(),
   "clockOut": zod.string().nullish(),
-  "notes": zod.string().nullish(),
   "totalMinutes": zod.number().nullish(),
-  "createdAt": zod.string()
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string().nullish(),
+  "timeOffType": zod.string().nullish(),
+  "timeOffRequestId": zod.number().nullish()
 }))
 })
 export const GetTimesheetReportResponse = zod.array(GetTimesheetReportResponseItem)

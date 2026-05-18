@@ -5,7 +5,7 @@
  * Time Clock API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { TimeEntry } from './timeEntry';
+import type { TimesheetEntry } from './timesheetEntry';
 
 export interface EmployeeTimesheet {
   employeeId: number;
@@ -13,5 +13,6 @@ export interface EmployeeTimesheet {
   /** @nullable */
   department?: string | null;
   totalMinutes: number;
-  entries: TimeEntry[];
+  totalTimeOffMinutes: number;
+  entries: TimesheetEntry[];
 }

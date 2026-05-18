@@ -178,6 +178,25 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TimeEntry"
+    post:
+      operationId: createTimeEntry
+      tags: [timeEntries]
+      summary: Manually create a past time entry (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualTimeEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeEntry"
+        "400":
+          description: Invalid input
 
   /time-entries/clock-in:
     post:
@@ -605,6 +624,49 @@ components:
         notes:
           type: string
 
+    ManualTimeEntryInput:
+      type: object
+      required: [employeeId, clockIn]
+      properties:
+        employeeId:
+          type: integer
+        clockIn:
+          type: string
+        clockOut:
+          type: string
+        notes:
+          type: string
+
+    TimesheetEntry:
+      type: object
+      required: [kind, employeeId]
+      properties:
+        kind:
+          type: string
+          enum: [work, time_off]
+        id:
+          type: ["integer", "null"]
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        date:
+          type: ["string", "null"]
+        clockIn:
+          type: ["string", "null"]
+        clockOut:
+          type: ["string", "null"]
+        totalMinutes:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: ["string", "null"]
+        timeOffType:
+          type: ["string", "null"]
+        timeOffRequestId:
+          type: ["integer", "null"]
+
     TimeOffRequest:
       type: object
       required: [id, employeeId, type, startDate, endDate, status, createdAt]
@@ -617,7 +679,7 @@ components:
           type: ["string", "null"]
         type:
           type: string
-          enum: [vacation, sick, personal, other]
+          enum: [vacation, pto, sick, bereavement, personal, other]
         startDate:
           type: string
         endDate:
@@ -644,7 +706,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [vacation, sick, personal, other]
+          enum: [vacation, pto, sick, bereavement, personal, other]
         startDate:
           type: string
         endDate:
@@ -730,7 +792,7 @@ components:
           type: ["string", "null"]
         type:
           type: string
-          enum: [vacation, sick, personal, other]
+          enum: [vacation, pto, sick, bereavement, personal, other]
         startDate:
           type: string
         endDate:
@@ -759,7 +821,7 @@ components:
 
     EmployeeTimesheet:
       type: object
-      required: [employeeId, employeeName, totalMinutes, entries]
+      required: [employeeId, employeeName, totalMinutes, totalTimeOffMinutes, entries]
       properties:
         employeeId:
           type: integer
@@ -769,7 +831,9 @@ components:
           type: ["string", "null"]
         totalMinutes:
           type: integer
+        totalTimeOffMinutes:
+          type: integer
         entries:
           type: array
           items:
-            $ref: "#/components/schemas/TimeEntry"
+            $ref: "#/components/schemas/TimesheetEntry"

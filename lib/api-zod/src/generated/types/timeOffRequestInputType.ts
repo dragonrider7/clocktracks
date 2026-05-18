@@ -11,7 +11,9 @@ export type TimeOffRequestInputType = typeof TimeOffRequestInputType[keyof typeo
 
 export const TimeOffRequestInputType = {
   vacation: 'vacation',
+  pto: 'pto',
   sick: 'sick',
+  bereavement: 'bereavement',
   personal: 'personal',
   other: 'other',
 } as const;

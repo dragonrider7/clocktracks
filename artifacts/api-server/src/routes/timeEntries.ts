@@ -9,6 +9,7 @@ import {
   UpdateTimeEntryParams,
   UpdateTimeEntryBody,
   DeleteTimeEntryParams,
+  CreateTimeEntryBody,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -59,6 +60,35 @@ router.get("/time-entries", async (req, res): Promise<void> => {
     .orderBy(timeEntriesTable.clockIn);
 
   res.json(entries.map(({ entry, employeeName }) => formatEntry(entry, employeeName)));
+});
+
+router.post("/time-entries", async (req, res): Promise<void> => {
+  const parsed = CreateTimeEntryBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [employee] = await db
+    .select()
+    .from(employeesTable)
+    .where(eq(employeesTable.id, parsed.data.employeeId));
+  if (!employee) {
+    res.status(400).json({ error: "Employee not found" });
+    return;
+  }
+
+  const [entry] = await db
+    .insert(timeEntriesTable)
+    .values({
+      employeeId: parsed.data.employeeId,
+      clockIn: new Date(parsed.data.clockIn),
+      clockOut: parsed.data.clockOut ? new Date(parsed.data.clockOut) : null,
+      notes: parsed.data.notes ?? null,
+    })
+    .returning();
+
+  res.status(201).json(formatEntry(entry, employee.name));
 });
 
 router.post("/time-entries/clock-in", async (req, res): Promise<void> => {

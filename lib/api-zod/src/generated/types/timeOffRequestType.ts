@@ -11,7 +11,9 @@ export type TimeOffRequestType = typeof TimeOffRequestType[keyof typeof TimeOffR
 
 export const TimeOffRequestType = {
   vacation: 'vacation',
+  pto: 'pto',
   sick: 'sick',
+  bereavement: 'bereavement',
   personal: 'personal',
   other: 'other',
 } as const;

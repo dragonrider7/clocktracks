@@ -11,7 +11,9 @@ export type OutThisWeekEntryType = typeof OutThisWeekEntryType[keyof typeof OutT
 
 export const OutThisWeekEntryType = {
   vacation: 'vacation',
+  pto: 'pto',
   sick: 'sick',
+  bereavement: 'bereavement',
   personal: 'personal',
   other: 'other',
 } as const;

@@ -33,6 +33,7 @@ import type {
   HealthStatus,
   ListTimeEntriesParams,
   ListTimeOffRequestsParams,
+  ManualTimeEntryInput,
   OutThisWeekEntry,
   PendingRequestsCount,
   TimeEntry,
@@ -660,6 +661,77 @@ export function useListTimeEntries<TData = Awaited<ReturnType<typeof listTimeEnt
 
 
 
+
+export const getCreateTimeEntryUrl = () => {
+
+
+
+
+  return `/api/time-entries`
+}
+
+/**
+ * @summary Manually create a past time entry (admin)
+ */
+export const createTimeEntry = async (manualTimeEntryInput: ManualTimeEntryInput, options?: RequestInit): Promise<TimeEntry> => {
+
+  return customFetch<TimeEntry>(getCreateTimeEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      manualTimeEntryInput,)
+  }
+);}
+
+
+
+
+export const getCreateTimeEntryMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTimeEntry>>, TError,{data: BodyType<ManualTimeEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTimeEntry>>, TError,{data: BodyType<ManualTimeEntryInput>}, TContext> => {
+
+const mutationKey = ['createTimeEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTimeEntry>>, {data: BodyType<ManualTimeEntryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTimeEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTimeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createTimeEntry>>>
+    export type CreateTimeEntryMutationBody = BodyType<ManualTimeEntryInput>
+    export type CreateTimeEntryMutationError = ErrorType<void>
+
+    /**
+ * @summary Manually create a past time entry (admin)
+ */
+export const useCreateTimeEntry = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTimeEntry>>, TError,{data: BodyType<ManualTimeEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTimeEntry>>,
+        TError,
+        {data: BodyType<ManualTimeEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTimeEntryMutationOptions(options));
+    }
 
 export const getClockInUrl = () => {
 
