@@ -11,6 +11,7 @@ import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star, ArrowRigh
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { useLocation } from "wouter";
+import { useMe } from "@/contexts/me-context";
 
 const TYPE_COLORS: Record<string, string> = {
   vacation: "bg-blue-100 text-blue-700",
@@ -75,11 +76,16 @@ function ViewAllLink({ onClick }: { onClick: () => void }) {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { me, isAdmin } = useMe();
   const { data: status, isLoading: statusLoading } = useGetDashboardStatus();
   const { data: weeklyHours, isLoading: hoursLoading } = useGetWeeklyHours();
   const { data: pendingRequests, isLoading: pendingLoading } = useGetPendingRequests();
   const { data: outThisWeek, isLoading: outLoading } = useGetOutThisWeek();
   const { data: upcomingEvents, isLoading: eventsLoading } = useGetUpcomingEvents();
+
+  const displayedHours = isAdmin
+    ? weeklyHours
+    : weeklyHours?.filter((emp) => emp.employeeId === me?.id);
 
   return (
     <div className="grid gap-4 md:gap-6">
@@ -172,19 +178,19 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
-              <CardTitle>This Week's Hours</CardTitle>
+              <CardTitle>{isAdmin ? "This Week's Hours" : "Your Hours This Week"}</CardTitle>
               <ViewAllLink onClick={() => setLocation("/time-entries")} />
             </div>
-            <CardDescription>Total hours worked this week</CardDescription>
+            <CardDescription>{isAdmin ? "Total hours worked this week" : "Your hours logged this week"}</CardDescription>
           </CardHeader>
           <CardContent>
             {hoursLoading ? (
               <Skeleton className="h-32 w-full" />
-            ) : (weeklyHours?.length ?? 0) === 0 ? (
+            ) : (displayedHours?.length ?? 0) === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">No hours tracked this week.</div>
             ) : (
               <div className="space-y-3">
-                {weeklyHours?.map((emp) => {
+                {displayedHours?.map((emp) => {
                   const hrs = emp.totalMinutes / 60;
                   const pct = Math.min(100, (hrs / 40) * 100);
                   return (
