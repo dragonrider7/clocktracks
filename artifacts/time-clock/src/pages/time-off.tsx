@@ -143,6 +143,47 @@ function CalendarView({ requests, holidays }: { requests: TimeOffRequest[]; holi
           );
         })}
       </div>
+
+      {/* ── Legend ── */}
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3 rounded-lg border bg-muted/30 px-4 py-3">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Type</span>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+            {(Object.entries(TYPE_LABELS) as [string, string][]).map(([type, label]) => (
+              <span key={type} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] border ${TYPE_COLORS[type] ?? TYPE_COLORS.other}`}>
+                {label}
+              </span>
+            ))}
+            <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] bg-amber-100 text-amber-800 border border-amber-200">
+              <Gift className="h-2.5 w-2.5" />Holiday
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status dot</span>
+          <div className="flex gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />Approved
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />Pending
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" />Denied
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Other</span>
+          <div className="flex gap-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="inline-block h-3 w-3 rounded-sm ring-2 ring-primary shrink-0" />Today
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
