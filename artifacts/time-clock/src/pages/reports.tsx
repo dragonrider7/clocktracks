@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   useGetTimesheetReport,
   useGetTimeOffBalances,
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, ChevronDown, ChevronUp, Clock4, Umbrella, CalendarDays } from "lucide-react";
+import { Printer, ChevronDown, ChevronUp, Clock4, Umbrella, CalendarDays, FileText } from "lucide-react";
 import { useMe } from "@/contexts/me-context";
 import { Redirect } from "wouter";
 import { EmployeeAvatar } from "@/components/employee-avatar";
@@ -395,6 +395,129 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
   const expandAll = () => setExpandedIds(new Set(report?.map((e) => e.employeeId) ?? []));
   const collapseAll = () => setExpandedIds(new Set());
 
+  const generateReport = () => {
+    if (!report || report.length === 0) return;
+    const rangeLabel = `${startDate} to ${endDate}`;
+    const generatedAt = new Date().toLocaleString([], { dateStyle: "long", timeStyle: "short" });
+
+    const entryRows = (entries: typeof report[0]["entries"]) => entries.map((e) => {
+      if (e.kind === "time_off") {
+        const label = TIME_OFF_TYPE_LABELS[e.timeOffType ?? "other"] ?? e.timeOffType ?? "Time Off";
+        const colorMap: Record<string, string> = {
+          vacation: "#dbeafe", pto: "#e0f2fe", sick: "#fee2e2",
+          bereavement: "#f3f4f6", personal: "#f3e8ff", other: "#f4f4f5", holiday: "#fef3c7",
+        };
+        const textMap: Record<string, string> = {
+          vacation: "#1e40af", pto: "#0369a1", sick: "#991b1b",
+          bereavement: "#374151", personal: "#6b21a8", other: "#3f3f46", holiday: "#92400e",
+        };
+        const bg = colorMap[e.timeOffType ?? "other"] ?? "#f4f4f5";
+        const color = textMap[e.timeOffType ?? "other"] ?? "#3f3f46";
+        return `<tr style="background:#fffbeb">
+          <td style="padding:6px 12px;color:#6b7280">${e.date ?? "—"}</td>
+          <td colspan="2" style="padding:6px 12px">
+            <span style="background:${bg};color:${color};padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500">${label}</span>
+          </td>
+          <td style="padding:6px 12px;text-align:right;font-family:monospace;font-weight:600">8h</td>
+          <td style="padding:6px 12px;color:#6b7280;font-size:12px">${e.notes ?? "—"}</td>
+        </tr>`;
+      }
+      const clockIn = e.clockIn ? new Date(e.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
+      const clockOut = e.clockOut ? new Date(e.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Still in";
+      const dur = e.totalMinutes != null ? fmtMinutes(e.totalMinutes) : "—";
+      return `<tr>
+        <td style="padding:6px 12px;color:#6b7280">${e.date ?? "—"}</td>
+        <td style="padding:6px 12px;font-family:monospace">${clockIn}</td>
+        <td style="padding:6px 12px;font-family:monospace">${clockOut}</td>
+        <td style="padding:6px 12px;text-align:right;font-family:monospace;font-weight:600">${dur}</td>
+        <td style="padding:6px 12px;color:#6b7280;font-size:12px">${e.notes ?? "—"}</td>
+      </tr>`;
+    }).join("");
+
+    const pages = report.map((emp, idx) => {
+      const isLast = idx === report.length - 1;
+      const workHrs = fmtMinutes(emp.totalMinutes);
+      const offHrs = emp.totalTimeOffMinutes ? fmtMinutes(emp.totalTimeOffMinutes) : null;
+      return `
+        <div class="page" style="${isLast ? "" : "page-break-after:always;"}padding:40px 48px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111">
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:24px">
+            <div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:4px">TimeClock · Employee Timesheet Report</div>
+              <div style="font-size:22px;font-weight:700">${emp.employeeName}</div>
+              ${emp.department ? `<div style="font-size:13px;color:#6b7280;margin-top:2px">${emp.department}</div>` : ""}
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;color:#6b7280">Period</div>
+              <div style="font-weight:600;font-size:14px">${rangeLabel}</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:4px">Generated ${generatedAt}</div>
+            </div>
+          </div>
+
+          <!-- Summary pills -->
+          <div style="display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 18px;min-width:110px">
+              <div style="font-size:11px;color:#16a34a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Work</div>
+              <div style="font-size:20px;font-weight:700;color:#15803d;font-family:monospace">${workHrs}</div>
+            </div>
+            ${offHrs ? `
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 18px;min-width:110px">
+              <div style="font-size:11px;color:#d97706;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Time Off</div>
+              <div style="font-size:20px;font-weight:700;color:#b45309;font-family:monospace">${offHrs}</div>
+            </div>` : ""}
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 18px;min-width:110px">
+              <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Entries</div>
+              <div style="font-size:20px;font-weight:700;color:#334155;font-family:monospace">${emp.entries.length}</div>
+            </div>
+          </div>
+
+          <!-- Entry table -->
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
+                <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Date</th>
+                <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Clock In</th>
+                <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Clock Out</th>
+                <th style="text-align:right;padding:8px 12px;font-weight:600;color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Duration</th>
+                <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Notes</th>
+              </tr>
+            </thead>
+            <tbody style="border-bottom:1px solid #e2e8f0">
+              ${entryRows(emp.entries)}
+            </tbody>
+          </table>
+
+          <!-- Footer -->
+          <div style="margin-top:32px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#9ca3af">
+            <span>${emp.employeeName} · ${rangeLabel}</span>
+            <span>Page ${idx + 1} of ${report.length}</span>
+          </div>
+        </div>`;
+    }).join("\n");
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Timesheet Report · ${rangeLabel}</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{background:#fff}
+        tr:nth-child(even){background:#f9fafb}
+        tr:hover{background:#f0f9ff}
+        @media print{
+          @page{margin:0.5in;size:letter portrait}
+          .page{page-break-after:always;padding:0}
+          .page:last-child{page-break-after:avoid}
+          tr:hover{background:inherit}
+        }
+      </style>
+    </head><body>${pages}</body></html>`;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -445,9 +568,14 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
         <Card><CardContent className="py-12 text-center text-muted-foreground">No entries found for this period.</CardContent></Card>
       ) : (
         <>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7 gap-1"><ChevronDown className="h-3 w-3" />Expand All</Button>
-            <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-7 gap-1"><ChevronUp className="h-3 w-3" />Collapse All</Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7 gap-1"><ChevronDown className="h-3 w-3" />Expand All</Button>
+              <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-7 gap-1"><ChevronUp className="h-3 w-3" />Collapse All</Button>
+            </div>
+            <Button size="sm" onClick={generateReport} className="gap-2 h-8">
+              <FileText className="h-3.5 w-3.5" />Generate Per-Employee Report
+            </Button>
           </div>
 
           {report.map((emp) => {
