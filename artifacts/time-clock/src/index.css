@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=MedievalSharp&family=Uncial+Antiqua&family=Philosopher:ital,wght@0,400;0,700;1,400&family=Inknut+Antiqua:wght@400;600;700&display=swap');
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -211,6 +211,242 @@
   --accent: 30 30% 93%;
 
   --nav-gradient-to: 15 90% 40%;
+}
+
+/* ── GRYFFINDOR (Scarlet & Gold — Courage & Bravery) ──── */
+.gryffindor {
+  --background: 33 45% 95%;
+  --foreground: 10 50% 10%;
+  --border: 33 30% 82%;
+  --input: 33 30% 82%;
+  --ring: 0 75% 38%;
+
+  --card: 38 45% 98%;
+  --card-foreground: 10 50% 10%;
+  --card-border: 38 30% 86%;
+
+  --popover: 38 45% 98%;
+  --popover-foreground: 10 50% 10%;
+  --popover-border: 38 30% 86%;
+
+  /* Gryffindor Scarlet */
+  --primary: 0 75% 38%;
+  --primary-foreground: 40 80% 92%;
+
+  /* Warm gold secondary */
+  --secondary: 40 65% 88%;
+  --secondary-foreground: 0 60% 22%;
+
+  --muted: 33 30% 90%;
+  --muted-foreground: 10 20% 42%;
+
+  --accent: 40 65% 88%;
+  --accent-foreground: 0 60% 22%;
+
+  --destructive: 0 84% 50%;
+  --destructive-foreground: 40 80% 95%;
+
+  --chart-1: 0 75% 38%;
+  --chart-2: 40 80% 45%;
+  --chart-3: 33 30% 60%;
+  --chart-4: 10 50% 30%;
+  --chart-5: 0 50% 20%;
+
+  --sidebar: 38 45% 98%;
+  --sidebar-foreground: 10 50% 10%;
+  --sidebar-border: 38 30% 86%;
+  --sidebar-primary: 0 75% 38%;
+  --sidebar-primary-foreground: 40 80% 92%;
+  --sidebar-accent: 40 55% 91%;
+  --sidebar-accent-foreground: 10 50% 10%;
+  --sidebar-ring: 0 75% 38%;
+
+  /* Scarlet → Deep Crimson gradient (like the Gryffindor common room fire) */
+  --nav-gradient-to: 355 65% 22%;
+
+  --app-font-sans: 'Cinzel', Georgia, serif;
+  --radius: .25rem;
+
+  --elevate-1: rgba(120, 10, 10, .04);
+  --elevate-2: rgba(120, 10, 10, .09);
+  --button-outline: rgba(180, 50, 10, .18);
+}
+
+/* ── HUFFLEPUFF (Golden Yellow & Badger Black) ────────── */
+.hufflepuff {
+  --background: 47 55% 96%;
+  --foreground: 35 30% 10%;
+  --border: 45 40% 82%;
+  --input: 45 40% 82%;
+  --ring: 42 85% 38%;
+
+  --card: 48 55% 99%;
+  --card-foreground: 35 30% 10%;
+  --card-border: 45 40% 87%;
+
+  --popover: 48 55% 99%;
+  --popover-foreground: 35 30% 10%;
+  --popover-border: 45 40% 87%;
+
+  /* Hufflepuff gold — deep enough for white text */
+  --primary: 42 85% 38%;
+  --primary-foreground: 48 80% 96%;
+
+  /* Dark earth-tone secondary */
+  --secondary: 35 35% 88%;
+  --secondary-foreground: 35 30% 12%;
+
+  --muted: 45 35% 91%;
+  --muted-foreground: 35 20% 42%;
+
+  --accent: 45 55% 88%;
+  --accent-foreground: 35 40% 15%;
+
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 48 80% 96%;
+
+  --chart-1: 42 85% 38%;
+  --chart-2: 35 50% 25%;
+  --chart-3: 45 40% 60%;
+  --chart-4: 42 60% 55%;
+  --chart-5: 35 30% 20%;
+
+  --sidebar: 48 55% 99%;
+  --sidebar-foreground: 35 30% 10%;
+  --sidebar-border: 45 40% 87%;
+  --sidebar-primary: 42 85% 38%;
+  --sidebar-primary-foreground: 48 80% 96%;
+  --sidebar-accent: 46 50% 92%;
+  --sidebar-accent-foreground: 35 30% 10%;
+  --sidebar-ring: 42 85% 38%;
+
+  /* Gold → deep earthy badger-black gradient */
+  --nav-gradient-to: 30 40% 14%;
+
+  --app-font-sans: 'Philosopher', Georgia, serif;
+  --radius: .4rem;
+
+  --elevate-1: rgba(180, 130, 10, .05);
+  --elevate-2: rgba(180, 130, 10, .10);
+  --button-outline: rgba(160, 110, 10, .18);
+}
+
+/* ── RAVENCLAW (Midnight Navy & Eagle Bronze) ─────────── */
+.ravenclaw {
+  --background: 218 28% 96%;
+  --foreground: 222 50% 10%;
+  --border: 218 25% 84%;
+  --input: 218 25% 84%;
+  --ring: 220 62% 30%;
+
+  --card: 216 30% 99%;
+  --card-foreground: 222 50% 10%;
+  --card-border: 218 25% 88%;
+
+  --popover: 216 30% 99%;
+  --popover-foreground: 222 50% 10%;
+  --popover-border: 218 25% 88%;
+
+  /* Ravenclaw midnight navy */
+  --primary: 220 62% 30%;
+  --primary-foreground: 218 60% 94%;
+
+  /* Eagle bronze secondary */
+  --secondary: 218 25% 88%;
+  --secondary-foreground: 222 50% 12%;
+
+  --muted: 218 22% 91%;
+  --muted-foreground: 218 18% 44%;
+
+  --accent: 218 25% 88%;
+  --accent-foreground: 222 50% 12%;
+
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 218 60% 96%;
+
+  --chart-1: 220 62% 30%;
+  --chart-2: 34 65% 42%;
+  --chart-3: 218 22% 55%;
+  --chart-4: 34 45% 60%;
+  --chart-5: 222 50% 18%;
+
+  --sidebar: 216 30% 99%;
+  --sidebar-foreground: 222 50% 10%;
+  --sidebar-border: 218 25% 88%;
+  --sidebar-primary: 220 62% 30%;
+  --sidebar-primary-foreground: 218 60% 94%;
+  --sidebar-accent: 218 22% 92%;
+  --sidebar-accent-foreground: 222 50% 10%;
+  --sidebar-ring: 220 62% 30%;
+
+  /* Midnight navy → deep Ravenclaw tower indigo gradient */
+  --nav-gradient-to: 228 70% 14%;
+
+  --app-font-sans: 'Inknut Antiqua', Georgia, serif;
+  --radius: .3rem;
+
+  --elevate-1: rgba(20, 40, 120, .04);
+  --elevate-2: rgba(20, 40, 120, .09);
+  --button-outline: rgba(20, 40, 120, .14);
+}
+
+/* ── SLYTHERIN (Serpent Green & Silver) ───────────────── */
+.slytherin {
+  --background: 150 10% 95%;
+  --foreground: 160 30% 8%;
+  --border: 150 12% 80%;
+  --input: 150 12% 80%;
+  --ring: 153 65% 22%;
+
+  --card: 145 12% 98%;
+  --card-foreground: 160 30% 8%;
+  --card-border: 150 12% 86%;
+
+  --popover: 145 12% 98%;
+  --popover-foreground: 160 30% 8%;
+  --popover-border: 150 12% 86%;
+
+  /* Slytherin deep emerald — dark as the dungeon common room */
+  --primary: 153 65% 22%;
+  --primary-foreground: 150 18% 94%;
+
+  /* Silver secondary */
+  --secondary: 150 8% 88%;
+  --secondary-foreground: 160 30% 10%;
+
+  --muted: 150 8% 90%;
+  --muted-foreground: 150 8% 42%;
+
+  --accent: 150 8% 88%;
+  --accent-foreground: 153 40% 15%;
+
+  --destructive: 0 65% 46%;
+  --destructive-foreground: 0 0% 97%;
+
+  --chart-1: 153 65% 22%;
+  --chart-2: 0 0% 55%;
+  --chart-3: 150 20% 55%;
+  --chart-4: 0 0% 75%;
+  --chart-5: 160 30% 12%;
+
+  --sidebar: 145 12% 98%;
+  --sidebar-foreground: 160 30% 8%;
+  --sidebar-border: 150 12% 86%;
+  --sidebar-primary: 153 65% 22%;
+  --sidebar-primary-foreground: 150 18% 94%;
+  --sidebar-accent: 150 10% 92%;
+  --sidebar-accent-foreground: 160 30% 8%;
+  --sidebar-ring: 153 65% 22%;
+
+  /* Deep emerald → near-black dungeon gradient (like the Black Lake ceiling) */
+  --nav-gradient-to: 158 60% 10%;
+
+  --app-font-sans: 'Cormorant Garamond', Georgia, serif;
+  --radius: .2rem;
+
+  --elevate-1: rgba(10, 80, 40, .04);
+  --elevate-2: rgba(10, 80, 40, .09);
+  --button-outline: rgba(10, 80, 40, .14);
 }
 
 @layer base {
