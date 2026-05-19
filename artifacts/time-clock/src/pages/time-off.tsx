@@ -6,21 +6,32 @@ import {
   useListEmployees,
   useGetTimeOffBalances,
   useListHolidays,
+  useListTimeAdjustments,
+  useCreateTimeAdjustment,
+  useReviewTimeAdjustment,
+  useListTimeEntries,
   getListTimeOffRequestsQueryKey,
+  getListTimeAdjustmentsQueryKey,
 } from "@workspace/api-client-react";
-import type { TimeOffRequest, Holiday } from "@workspace/api-client-react";
+import type { TimeOffRequest, Holiday, TimeAdjustmentRequest } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight, Gift } from "lucide-react";
+import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight, Gift, PlusCircle, Clock, ClipboardList } from "lucide-react";
 import { useMe } from "@/contexts/me-context";
+import { EmployeeAvatar } from "@/components/employee-avatar";
 
 type TimeOffType = "vacation" | "pto" | "sick" | "bereavement" | "personal" | "other";
+type ViewMode = "list" | "calendar" | "adjustments";
+
+// ─── Time-off helpers ────────────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
   vacation: "Vacation",
@@ -60,35 +71,22 @@ function computeHolidayDate(h: Holiday, year: number): string | null {
     return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   }
   if (h.recurrenceType === "nth_weekday") {
-    const month = h.recurrenceMonth!;
-    const targetWd = h.recurrenceWeekday!;
+    const m = h.recurrenceMonth!;
     const nth = h.recurrenceNth!;
-    if (nth === -1) {
-      const lastDay = new Date(year, month, 0).getDate();
-      for (let d = lastDay; d >= 1; d--) {
-        if (new Date(year, month - 1, d).getDay() === targetWd) {
-          return `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        }
-      }
-    } else {
-      let count = 0;
-      for (let d = 1; d <= 31; d++) {
-        const dt = new Date(year, month - 1, d);
-        if (dt.getMonth() !== month - 1) break;
-        if (dt.getDay() === targetWd) {
-          count++;
-          if (count === nth) {
-            return `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-          }
-        }
-      }
-    }
+    const dow = h.recurrenceWeekday!;
+    const firstOfMonth = new Date(year, m - 1, 1);
+    let day = (dow - firstOfMonth.getDay() + 7) % 7 + 1;
+    day += (nth - 1) * 7;
+    if (day > new Date(year, m, 0).getDate()) return null;
+    return `${year}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
   return null;
 }
 
-const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAY_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function holidaysOnDay(dateStr: string, holidays: Holiday[]): Holiday[] {
+  const year = parseInt(dateStr.slice(0, 4));
+  return holidays.filter((h) => computeHolidayDate(h, year) === dateStr);
+}
 
 function CalendarView({ requests, holidays }: { requests: TimeOffRequest[]; holidays: Holiday[] }) {
   const today = new Date();
@@ -96,88 +94,68 @@ function CalendarView({ requests, holidays }: { requests: TimeOffRequest[]; holi
   const [month, setMonth] = useState(today.getMonth());
 
   const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstOffset = firstDay.getDay();
-  const rows = Math.ceil((firstOffset + lastDay.getDate()) / 7);
+  const monthName = firstDay.toLocaleString("default", { month: "long" });
   const todayStr = toDateStr(today);
-
-  // Pre-compute holiday dates for this month
-  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
-  const holidaysByDate = new Map<string, Holiday[]>();
-  for (const h of holidays) {
-    const d = computeHolidayDate(h, year);
-    if (d && d.startsWith(monthPrefix)) {
-      if (!holidaysByDate.has(d)) holidaysByDate.set(d, []);
-      holidaysByDate.get(d)!.push(h);
-    }
-  }
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between px-1">
-        <button onClick={prevMonth} className="p-1.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-        <span className="font-semibold text-base">{MONTH_NAMES[month]} {year}</span>
-        <button onClick={nextMonth} className="p-1.5 rounded hover:bg-muted transition-colors"><ChevronRight className="h-4 w-4" /></button>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={prevMonth} className="p-1.5 hover:bg-muted rounded-lg transition-colors"><ChevronLeft className="h-4 w-4" /></button>
+        <span className="font-semibold text-sm">{monthName} {year}</span>
+        <button onClick={nextMonth} className="p-1.5 hover:bg-muted rounded-lg transition-colors"><ChevronRight className="h-4 w-4" /></button>
       </div>
-      <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border">
-        {DAY_LABELS.map((d) => (
-          <div key={d} className="bg-muted/60 text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
+      <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden text-center text-xs">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <div key={d} className="bg-muted py-1.5 font-medium text-muted-foreground">{d}</div>
         ))}
-        {Array.from({ length: rows * 7 }, (_, i) => {
-          const dayNum = i - firstOffset + 1;
-          const isValid = dayNum >= 1 && dayNum <= lastDay.getDate();
-          if (!isValid) return <div key={i} className="bg-background min-h-[72px]" />;
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+        {Array.from({ length: firstOffset }).map((_, i) => (
+          <div key={`e-${i}`} className="bg-background py-2 min-h-[56px]" />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const dayRequests = requestsOnDay(dateStr, requests);
-          const dayHolidays = holidaysByDate.get(dateStr) ?? [];
+          const dayHolidays = holidaysOnDay(dateStr, holidays);
           const isToday = dateStr === todayStr;
-          const isHoliday = dayHolidays.length > 0;
           return (
-            <div key={i} className={`bg-background min-h-[72px] p-1.5 ${isToday ? "ring-2 ring-inset ring-primary/40" : ""} ${isHoliday ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}`}>
-              <span className={`text-xs font-medium inline-flex h-5 w-5 items-center justify-center rounded-full ${isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-                {dayNum}
-              </span>
-              <div className="mt-0.5 space-y-0.5">
-                {dayHolidays.map((h) => (
-                  <div key={`h-${h.id}`} title={h.name}
-                    className="flex items-center gap-1 rounded text-[10px] leading-tight px-1 py-0.5 border truncate bg-amber-100 text-amber-800 border-amber-300">
-                    <Gift className="h-2 w-2 shrink-0" />
-                    <span className="truncate font-medium">{h.name}</span>
-                  </div>
-                ))}
-                {dayRequests.slice(0, 3 - dayHolidays.length).map((req) => (
-                  <div key={req.id} title={`${req.employeeName ?? "Employee"} — ${TYPE_LABELS[req.type] ?? req.type} (${req.status})`}
-                    className={`flex items-center gap-1 rounded text-[10px] leading-tight px-1 py-0.5 border truncate ${TYPE_COLORS[req.type] ?? TYPE_COLORS.other}`}>
-                    <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[req.status] ?? "bg-gray-400"}`} />
-                    <span className="truncate">{req.employeeName?.split(" ")[0] ?? "?"}</span>
-                  </div>
-                ))}
-                {(dayRequests.length + dayHolidays.length) > 3 && (
-                  <div className="text-[10px] text-muted-foreground px-1">
-                    +{dayRequests.length + dayHolidays.length - 3} more
-                  </div>
-                )}
-              </div>
+            <div key={day} className={`bg-background py-1.5 px-1 min-h-[56px] flex flex-col gap-0.5 ${isToday ? "ring-2 ring-inset ring-primary" : ""}`}>
+              <span className={`text-xs font-medium mb-0.5 ${isToday ? "text-primary" : "text-foreground"}`}>{day}</span>
+              {dayHolidays.map((h) => (
+                <span key={h.id} className="text-[10px] leading-tight rounded px-1 py-0.5 bg-amber-100 text-amber-800 truncate flex items-center gap-0.5">
+                  <Gift className="h-2.5 w-2.5 shrink-0" />{h.name}
+                </span>
+              ))}
+              {dayRequests.slice(0, 2).map((r) => (
+                <span key={r.id} className={`text-[10px] leading-tight rounded px-1 py-0.5 flex items-center gap-1 truncate ${TYPE_COLORS[r.type] ?? TYPE_COLORS.other}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[r.status] ?? "bg-gray-400"}`} />
+                  {r.employeeName ?? TYPE_LABELS[r.type]}
+                </span>
+              ))}
+              {dayRequests.length > 2 && (
+                <span className="text-[10px] text-muted-foreground">+{dayRequests.length - 2}</span>
+              )}
             </div>
           );
         })}
-      </div>
-      <div className="flex flex-wrap gap-2 pt-1">
-        <span className="text-xs px-2 py-0.5 rounded border bg-amber-100 text-amber-800 border-amber-300 flex items-center gap-1">
-          <Gift className="h-3 w-3" /> Holiday
-        </span>
-        {Object.entries(TYPE_COLORS).map(([type, cls]) => (
-          <span key={type} className={`text-xs px-2 py-0.5 rounded border ${cls}`}>{TYPE_LABELS[type] ?? type}</span>
-        ))}
       </div>
     </div>
   );
 }
 
-function fmtHours(h: number): string {
+function TypeBadge({ type }: { type: string }) {
+  return (
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs border ${TYPE_COLORS[type] ?? TYPE_COLORS.other}`}>
+      {TYPE_LABELS[type] ?? type}
+    </span>
+  );
+}
+
+function fmtHours(h: number) {
   if (h === Math.floor(h)) return `${h}h`;
   return `${h.toFixed(1)}h`;
 }
@@ -277,13 +255,101 @@ function BalanceWidget({ employeeId }: { employeeId: number | undefined }) {
   );
 }
 
-function TypeBadge({ type }: { type: string }) {
+// ─── Adjustment helpers ──────────────────────────────────────────────────────
+
+const ADJ_STATUS_BADGE: Record<string, React.ReactNode> = {
+  pending: <Badge variant="secondary">Pending</Badge>,
+  approved: <Badge className="bg-green-500 hover:bg-green-600">Approved</Badge>,
+  denied: <Badge variant="destructive">Denied</Badge>,
+};
+
+const ADJ_TYPE_LABELS: Record<string, string> = {
+  new: "Add Entry",
+  edit: "Correct Entry",
+  delete: "Remove Entry",
+};
+
+function formatDateTime(iso: string | null | undefined) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+}
+
+function AdjustmentRow({ adj, onApprove, onDeny, isAdmin, isReviewing }: {
+  adj: TimeAdjustmentRequest;
+  onApprove?: (id: number) => void;
+  onDeny?: (id: number, notes: string) => void;
+  isAdmin: boolean;
+  isReviewing: boolean;
+}) {
+  const [denyOpen, setDenyOpen] = useState(false);
+  const [denyNotes, setDenyNotes] = useState("");
+
   return (
-    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs border ${TYPE_COLORS[type] ?? TYPE_COLORS.other}`}>
-      {TYPE_LABELS[type] ?? type}
-    </span>
+    <TableRow>
+      {isAdmin && (
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar name={adj.employeeName ?? "?"} imageUrl={adj.imageUrl} size="sm" />
+            <span className="font-medium text-sm">{adj.employeeName ?? "—"}</span>
+          </div>
+        </TableCell>
+      )}
+      <TableCell>
+        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs border ${
+          adj.requestType === "new" ? "bg-blue-50 text-blue-700 border-blue-200" :
+          adj.requestType === "edit" ? "bg-amber-50 text-amber-700 border-amber-200" :
+          "bg-red-50 text-red-700 border-red-200"
+        }`}>
+          {ADJ_TYPE_LABELS[adj.requestType] ?? adj.requestType}
+        </span>
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        <div className="space-y-0.5">
+          {adj.requestedDate && <div>Date: {adj.requestedDate}</div>}
+          {adj.requestedClockIn && <div>In: {formatDateTime(adj.requestedClockIn)}</div>}
+          {adj.requestedClockOut && <div>Out: {formatDateTime(adj.requestedClockOut)}</div>}
+          {!adj.requestedDate && !adj.requestedClockIn && !adj.requestedClockOut && <span>—</span>}
+        </div>
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground max-w-[180px] truncate">{adj.reason || "—"}</TableCell>
+      <TableCell>{ADJ_STATUS_BADGE[adj.status] ?? <Badge variant="outline">{adj.status}</Badge>}</TableCell>
+      <TableCell className="text-xs text-muted-foreground max-w-[160px] truncate">{adj.adminNotes || "—"}</TableCell>
+      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+        {new Date(adj.createdAt).toLocaleDateString()}
+      </TableCell>
+      {isAdmin && (
+        <TableCell className="text-right">
+          {adj.status === "pending" && (
+            <div className="flex justify-end gap-1">
+              <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 gap-1" onClick={() => onApprove?.(adj.id)} disabled={isReviewing}>
+                <CheckCircle className="h-3.5 w-3.5" />Approve
+              </Button>
+              <Dialog open={denyOpen} onOpenChange={setDenyOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="text-destructive hover:text-destructive gap-1" disabled={isReviewing}>
+                    <XCircle className="h-3.5 w-3.5" />Deny
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Deny Adjustment Request</DialogTitle></DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <p className="text-sm text-muted-foreground">Optionally add a note explaining why this request is being denied.</p>
+                    <Textarea placeholder="Reason for denial (optional)..." value={denyNotes} onChange={(e) => setDenyNotes(e.target.value)} />
+                    <Button variant="destructive" className="w-full" onClick={() => { onDeny?.(adj.id, denyNotes); setDenyOpen(false); setDenyNotes(""); }}>
+                      Deny Request
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+        </TableCell>
+      )}
+    </TableRow>
   );
 }
+
+// ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function TimeOff() {
   const { data: requests, isLoading } = useListTimeOffRequests();
@@ -295,7 +361,7 @@ export default function TimeOff() {
   const { toast } = useToast();
   const { me, isAdmin } = useMe();
 
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [view, setView] = useState<ViewMode>("list");
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [newRequest, setNewRequest] = useState({
     employeeId: "",
@@ -305,6 +371,30 @@ export default function TimeOff() {
     notes: "",
   });
 
+  // Adjustment state
+  const adjParams = isAdmin ? {} : { employeeId: me?.id };
+  const { data: adjustments, isLoading: adjLoading } = useListTimeAdjustments(adjParams, {
+    query: { queryKey: getListTimeAdjustmentsQueryKey(adjParams), enabled: isAdmin || !!me?.id },
+  });
+  const entryParams = me ? { employeeId: me.id } : { employeeId: 0 };
+  const { data: myEntries } = useListTimeEntries(entryParams, {
+    query: { enabled: !!me, queryKey: ["time-entries", me?.id] },
+  });
+  const reviewAdjMutation = useReviewTimeAdjustment();
+  const createAdjMutation = useCreateTimeAdjustment();
+  const [isAdjOpen, setIsAdjOpen] = useState(false);
+  const [newAdj, setNewAdj] = useState({
+    requestType: "edit" as "new" | "edit" | "delete",
+    timeEntryId: "",
+    requestedDate: "",
+    requestedClockIn: "",
+    requestedClockOut: "",
+    reason: "",
+  });
+
+  const invalidateAdj = () => queryClient.invalidateQueries({ queryKey: getListTimeAdjustmentsQueryKey(adjParams) });
+
+  // Time-off handlers
   const handleReview = (id: number, status: "approved" | "denied") => {
     if (!me) return;
     reviewMutation.mutate(
@@ -334,6 +424,52 @@ export default function TimeOff() {
     );
   };
 
+  // Adjustment handlers
+  const handleAdjApprove = (id: number) => {
+    if (!me) return;
+    reviewAdjMutation.mutate(
+      { id, data: { status: "approved", reviewedBy: me.id } },
+      {
+        onSuccess: () => { toast({ title: "Request approved" }); invalidateAdj(); },
+        onError: () => toast({ title: "Failed to approve", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleAdjDeny = (id: number, adminNotes: string) => {
+    if (!me) return;
+    reviewAdjMutation.mutate(
+      { id, data: { status: "denied", reviewedBy: me.id, adminNotes: adminNotes || undefined } },
+      {
+        onSuccess: () => { toast({ title: "Request denied" }); invalidateAdj(); },
+        onError: () => toast({ title: "Failed to deny", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleSubmitAdj = () => {
+    if (!me) return;
+    const entryId = newAdj.timeEntryId ? parseInt(newAdj.timeEntryId) : undefined;
+    const clockIn = newAdj.requestedDate && newAdj.requestedClockIn
+      ? `${newAdj.requestedDate}T${newAdj.requestedClockIn}:00`
+      : undefined;
+    const clockOut = newAdj.requestedDate && newAdj.requestedClockOut
+      ? `${newAdj.requestedDate}T${newAdj.requestedClockOut}:00`
+      : undefined;
+    createAdjMutation.mutate(
+      { data: { employeeId: me.id, requestType: newAdj.requestType, timeEntryId: entryId, requestedDate: newAdj.requestedDate || undefined, requestedClockIn: clockIn, requestedClockOut: clockOut, reason: newAdj.reason || undefined } },
+      {
+        onSuccess: () => {
+          toast({ title: "Adjustment request submitted" });
+          setIsAdjOpen(false);
+          setNewAdj({ requestType: "edit", timeEntryId: "", requestedDate: "", requestedClockIn: "", requestedClockOut: "", reason: "" });
+          invalidateAdj();
+        },
+        onError: () => toast({ title: "Failed to submit", variant: "destructive" }),
+      }
+    );
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved": return <Badge className="bg-green-500 hover:bg-green-600">Approved</Badge>;
@@ -344,8 +480,10 @@ export default function TimeOff() {
 
   const displayedRequests = isAdmin ? requests : requests?.filter((r) => r.employeeId === me?.id);
   const calendarRequests = isAdmin ? (requests ?? []) : (requests?.filter((r) => r.employeeId === me?.id) ?? []);
+  const pendingOffCount = requests?.filter((r) => r.status === "pending" && (isAdmin || r.employeeId === me?.id)).length ?? 0;
+  const pendingAdjCount = adjustments?.filter((a) => a.status === "pending").length ?? 0;
 
-  const requestDialog = (
+  const timeOffDialog = (
     <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
       <DialogTrigger asChild>
         <Button size="sm" data-testid="button-request-time-off"><Plus className="w-4 h-4 mr-2" />Request Time Off</Button>
@@ -400,29 +538,156 @@ export default function TimeOff() {
     </Dialog>
   );
 
+  const adjDialog = (
+    <Dialog open={isAdjOpen} onOpenChange={setIsAdjOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="gap-2"><PlusCircle className="h-4 w-4" />Request Correction</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Request Time Correction</DialogTitle></DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="text-sm font-medium">Type of Request</label>
+            <Select value={newAdj.requestType} onValueChange={(v: "new" | "edit" | "delete") => setNewAdj({ ...newAdj, requestType: v, timeEntryId: "" })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">Add a missing entry</SelectItem>
+                <SelectItem value="edit">Correct an existing entry</SelectItem>
+                <SelectItem value="delete">Remove an incorrect entry</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {(newAdj.requestType === "edit" || newAdj.requestType === "delete") && (
+            <div>
+              <label className="text-sm font-medium">Which entry?</label>
+              <Select value={newAdj.timeEntryId} onValueChange={(v) => setNewAdj({ ...newAdj, timeEntryId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select entry" /></SelectTrigger>
+                <SelectContent>
+                  {myEntries?.slice().reverse().map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>
+                      {new Date(e.clockIn).toLocaleDateString()} —{" "}
+                      {new Date(e.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {e.clockOut ? ` to ${new Date(e.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : " (active)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {newAdj.requestType !== "delete" && (
+            <>
+              <div>
+                <label className="text-sm font-medium">Date</label>
+                <Input type="date" value={newAdj.requestedDate} onChange={(e) => setNewAdj({ ...newAdj, requestedDate: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Clock In Time</label>
+                  <Input type="time" value={newAdj.requestedClockIn} onChange={(e) => setNewAdj({ ...newAdj, requestedClockIn: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Clock Out Time</label>
+                  <Input type="time" value={newAdj.requestedClockOut} onChange={(e) => setNewAdj({ ...newAdj, requestedClockOut: e.target.value })} />
+                </div>
+              </div>
+            </>
+          )}
+          <div>
+            <label className="text-sm font-medium">Reason / Notes</label>
+            <Textarea placeholder="Explain what needs to be corrected and why..." value={newAdj.reason} onChange={(e) => setNewAdj({ ...newAdj, reason: e.target.value })} />
+          </div>
+          <Button className="w-full" onClick={handleSubmitAdj} disabled={createAdjMutation.isPending || !newAdj.reason}>
+            Submit Request
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div className="space-y-4">
       <BalanceWidget employeeId={me?.id} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
-          <CardTitle>Time Off Requests</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle>
+              {view === "adjustments" ? "Time Adjustments" : "Time Off Requests"}
+            </CardTitle>
+            {view !== "adjustments" && pendingOffCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-xs px-2 py-0.5 border border-amber-200 font-medium">
+                {pendingOffCount} pending
+              </span>
+            )}
+            {view === "adjustments" && pendingAdjCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-xs px-2 py-0.5 border border-amber-200 font-medium">
+                {pendingAdjCount} pending
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-lg border overflow-hidden">
               <button onClick={() => setView("list")} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors ${view === "list" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
-                <List className="h-3.5 w-3.5" />List
+                <List className="h-3.5 w-3.5" />Requests
               </button>
               <button onClick={() => setView("calendar")} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
                 <CalendarDays className="h-3.5 w-3.5" />Calendar
               </button>
+              <button onClick={() => setView("adjustments")} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors ${view === "adjustments" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+                <ClipboardList className="h-3.5 w-3.5" />
+                Adjustments
+                {pendingAdjCount > 0 && view !== "adjustments" && (
+                  <span className="ml-1 h-4 min-w-[16px] px-0.5 rounded-full bg-amber-400 text-white text-[10px] font-bold flex items-center justify-center">
+                    {pendingAdjCount}
+                  </span>
+                )}
+              </button>
             </div>
-            {requestDialog}
+            {view === "adjustments" ? (!isAdmin ? adjDialog : null) : timeOffDialog}
           </div>
         </CardHeader>
+
         <CardContent>
           {view === "calendar" ? (
-            isLoading ? <div className="h-96 flex items-center justify-center text-muted-foreground text-sm">Loading...</div>
+            isLoading
+              ? <div className="h-96 flex items-center justify-center text-muted-foreground text-sm">Loading...</div>
               : <CalendarView requests={calendarRequests} holidays={holidays} />
+          ) : view === "adjustments" ? (
+            adjLoading ? (
+              <div className="py-12 text-center text-muted-foreground text-sm">Loading...</div>
+            ) : adjustments?.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground text-sm">
+                <Clock className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                {isAdmin ? "No adjustment requests yet." : "You have no time adjustment requests."}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {isAdmin && <TableHead>Employee</TableHead>}
+                    <TableHead>Type</TableHead>
+                    <TableHead>Requested Times</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Admin Notes</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {adjustments?.map((adj) => (
+                    <AdjustmentRow
+                      key={adj.id}
+                      adj={adj}
+                      onApprove={handleAdjApprove}
+                      onDeny={handleAdjDeny}
+                      isAdmin={isAdmin}
+                      isReviewing={reviewAdjMutation.isPending}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            )
           ) : (
             <Table>
               <TableHeader>

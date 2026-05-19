@@ -17,7 +17,6 @@ import TimeOff from "@/pages/time-off";
 import Reports from "@/pages/reports";
 import Profile from "@/pages/profile";
 import Holidays from "@/pages/holidays";
-import TimeAdjustments from "@/pages/time-adjustments";
 import Admin from "@/pages/admin";
 import { MeProvider } from "@/contexts/me-context";
 
@@ -240,7 +239,6 @@ function ClerkProviderWithRoutes() {
             <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
             <Route path="/holidays" component={() => <ProtectedRoute component={Holidays} />} />
             <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
-            <Route path="/time-adjustments" component={() => <ProtectedRoute component={TimeAdjustments} />} />
             <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
             <Route component={NotFound} />
           </Switch>

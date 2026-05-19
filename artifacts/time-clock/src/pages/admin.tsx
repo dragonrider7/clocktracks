@@ -42,8 +42,7 @@ export default function Admin() {
   const adminLinks = [
     { href: "/employees", icon: Users, label: "Manage Employees", desc: "Add, edit, or remove team members" },
     { href: "/time-entries", icon: Clock, label: "Time Log", desc: "View and edit all time entries" },
-    { href: "/time-adjustments", icon: ClipboardList, label: "Adjustment Requests", desc: "Review employee time correction requests", badge: pendingAdj },
-    { href: "/time-off", icon: Calendar, label: "Time Off Requests", desc: "Approve or deny time off requests", badge: pendingOff },
+    { href: "/time-off", icon: Calendar, label: "Time Off & Adjustments", desc: "Approve time off and time correction requests", badge: pendingAdj + pendingOff },
     { href: "/holidays", icon: Gift, label: "Holidays", desc: "Manage company holidays" },
     { href: "/reports", icon: FileBarChart, label: "Reports", desc: "Timesheets and time off balances" },
   ];

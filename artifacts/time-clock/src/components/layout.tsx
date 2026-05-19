@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, ClipboardList, EyeOff, Eye } from "lucide-react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, EyeOff, Eye } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { useMe } from "@/contexts/me-context";
 import { useTheme, THEMES } from "@/contexts/theme-context";
@@ -151,16 +151,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [imgError, setImgError] = useState(false);
 
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
-    { href: "/clock", label: "Clock In/Out", icon: Clock, adminOnly: false },
-    { href: "/employees", label: "Employees", icon: Users, adminOnly: true },
-    { href: "/time-entries", label: "Time Log", icon: Table2, adminOnly: false },
-    { href: "/time-off", label: "Time Off", icon: Calendar, adminOnly: false },
-    { href: "/time-adjustments", label: "Adjustments", icon: ClipboardList, adminOnly: false },
-    { href: "/holidays", label: "Holidays", icon: Gift, adminOnly: true },
-    { href: "/reports", label: "Reports", icon: FileBarChart, adminOnly: true },
-    { href: "/admin", label: "Admin", icon: Settings, adminOnly: true },
-  ].filter((item) => !item.adminOnly || isAdmin);
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, alwaysForAdmin: false },
+    { href: "/clock", label: "Clock In/Out", icon: Clock, adminOnly: false, alwaysForAdmin: false },
+    { href: "/employees", label: "Employees", icon: Users, adminOnly: true, alwaysForAdmin: false },
+    { href: "/time-entries", label: "Time Log", icon: Table2, adminOnly: false, alwaysForAdmin: false },
+    { href: "/time-off", label: "Time Off", icon: Calendar, adminOnly: false, alwaysForAdmin: false },
+    { href: "/holidays", label: "Holidays", icon: Gift, adminOnly: true, alwaysForAdmin: false },
+    { href: "/reports", label: "Reports", icon: FileBarChart, adminOnly: true, alwaysForAdmin: false },
+    { href: "/admin", label: "Admin", icon: Settings, adminOnly: true, alwaysForAdmin: true },
+  ].filter((item) => item.alwaysForAdmin ? isActualAdmin : (!item.adminOnly || isAdmin));
 
   const initials = me?.name
     ? me.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()

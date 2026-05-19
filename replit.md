@@ -43,7 +43,13 @@ A time clock web application for small teams (10-15 employees) to track daily cl
 - **Clock In/Out** — one-click clock in/out by selecting an employee name
 - **Employees** — admin CRUD for managing employee records (name, department, role, PIN, email)
 - **Time Log** — filterable table of all time entries; admins can edit or delete entries
-- **Time Off** — calendar + list of vacation/sick/personal requests; admins can approve or deny
+- **Time Off** — three-tab page: Requests list, Calendar view, and Adjustments tab (time correction requests)
+  - Sick time has its own balance separate from PTO; bereavement is tracked but deducts from nothing
+  - Adjustment requests: employees submit add/edit/delete corrections; admins approve or deny
+- **Admin** — `/admin` hub with pending counts, quick links to all admin sections, and the employee view toggle
+  - The Admin nav link is always visible to actual admins, even when in Employee View Mode
+- **Notification Bell** — nav bell icon with unread count; admins receive notifications for time-off and adjustment requests
+- **Employee View Mode** — admins can browse the site as a regular employee; Admin panel remains accessible
 
 ## Authentication
 
@@ -79,6 +85,12 @@ _Populate as you build — explicit user instructions worth remembering across s
 - `/profile` is a dedicated full page (navigated via the user dropdown)
 - Shows employee info card (name, department, role, time off balance), then Clerk UserProfile for account settings (profile picture, name, password, etc.)
 - The dialog approach has been replaced entirely
+
+## Context file
+
+- `useMe` is exported from `src/contexts/me-context.tsx` (NOT from App.tsx) — avoids circular imports and Fast Refresh issues
+- `isAdmin` in MeContext = `me?.role === "admin" && !isViewingAsEmployee`; use `me?.role === "admin"` directly to check actual role regardless of view mode
+- Time adjustments are embedded in the Time Off page as a third tab — there is no separate `/time-adjustments` route
 
 ## Gotchas
 
