@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useListTimeOffRequests,
   useCreateTimeOffRequest,
@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight, Gift, PlusCircle, Clock, ClipboardList } from "lucide-react";
+import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight, Gift, PlusCircle, Clock, ClipboardList, AlertTriangle } from "lucide-react";
 import { useMe } from "@/contexts/me-context";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 
@@ -478,9 +478,30 @@ export default function TimeOff() {
     }
   };
 
-  const displayedRequests = isAdmin ? requests : requests?.filter((r) => r.employeeId === me?.id);
-  const calendarRequests = isAdmin ? (requests ?? []) : (requests?.filter((r) => r.employeeId === me?.id) ?? []);
-  const pendingOffCount = requests?.filter((r) => r.status === "pending" && (isAdmin || r.employeeId === me?.id)).length ?? 0;
+  const displayedRequests = requests;
+  const calendarRequests = requests ?? [];
+  const pendingOffCount = requests?.filter((r) => r.status === "pending").length ?? 0;
+
+  // Compute how many OTHER employees are already off on any day in the requested range
+  const busyDayCount = useMemo(() => {
+    if (!newRequest.startDate || !newRequest.endDate || !requests) return 0;
+    const start = new Date(newRequest.startDate + "T00:00:00");
+    const end = new Date(newRequest.endDate + "T00:00:00");
+    if (end < start) return 0;
+    let maxCount = 0;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split("T")[0];
+      const count = requests.filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.employeeId !== me?.id &&
+          r.startDate <= dateStr &&
+          r.endDate >= dateStr
+      ).length;
+      maxCount = Math.max(maxCount, count);
+    }
+    return maxCount;
+  }, [newRequest.startDate, newRequest.endDate, requests, me?.id]);
   const pendingAdjCount = adjustments?.filter((a) => a.status === "pending").length ?? 0;
 
   const timeOffDialog = (
@@ -526,6 +547,14 @@ export default function TimeOff() {
               <input type="date" data-testid="input-end-date" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newRequest.endDate} onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })} />
             </div>
           </div>
+          {!isAdmin && busyDayCount >= 2 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                <strong>Heads up:</strong> {busyDayCount} other {busyDayCount === 1 ? "person is" : "people are"} already scheduled off on one or more of these days. Your request may be denied due to staffing needs.
+              </span>
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium">Notes (optional)</label>
             <textarea data-testid="input-notes" className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Any additional details..." value={newRequest.notes} onChange={(e) => setNewRequest({ ...newRequest, notes: e.target.value })} />
@@ -692,7 +721,7 @@ export default function TimeOff() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {isAdmin && <TableHead>Employee</TableHead>}
+                  <TableHead>Employee</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Dates</TableHead>
                   <TableHead>Duration</TableHead>
@@ -703,17 +732,24 @@ export default function TimeOff() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={isAdmin ? 7 : 5} className="text-center">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center">Loading...</TableCell></TableRow>
                 ) : displayedRequests?.length === 0 ? (
-                  <TableRow><TableCell colSpan={isAdmin ? 7 : 5} className="text-center text-muted-foreground py-8">No time off requests yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center text-muted-foreground py-8">No time off requests yet.</TableCell></TableRow>
                 ) : (
                   displayedRequests?.map((req) => {
                     const start = new Date(req.startDate + "T00:00:00");
                     const end = new Date(req.endDate + "T00:00:00");
                     const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+                    const isOwn = req.employeeId === me?.id;
                     return (
-                      <TableRow key={req.id} data-testid={`row-request-${req.id}`}>
-                        {isAdmin && <TableCell className="font-medium">{req.employeeName}</TableCell>}
+                      <TableRow key={req.id} data-testid={`row-request-${req.id}`} className={isOwn ? "bg-primary/5" : ""}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <EmployeeAvatar name={req.employeeName ?? "?"} imageUrl={null} size="sm" />
+                            <span className="font-medium text-sm">{req.employeeName ?? "—"}</span>
+                            {isOwn && <span className="text-[10px] text-muted-foreground">(you)</span>}
+                          </div>
+                        </TableCell>
                         <TableCell><TypeBadge type={req.type} /></TableCell>
                         <TableCell className="text-sm">{req.startDate === req.endDate ? req.startDate : `${req.startDate} – ${req.endDate}`}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{days}d / {days * 8}h</TableCell>
