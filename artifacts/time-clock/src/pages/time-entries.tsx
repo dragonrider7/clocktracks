@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Pencil, Filter, PlusCircle } from "lucide-react";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso);

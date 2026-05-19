@@ -20,6 +20,10 @@ export interface TimeOffBalance {
   plannedHours: number;
   remainingHours: number;
   usedPlusPlannedHours: number;
+  sickTimeAllotmentHours: number;
+  sickUsedHours: number;
+  sickPlannedHours: number;
+  sickRemainingHours: number;
   year: number;
   breakdown: TimeOffTypeBreakdown[];
   requests: TimeOffRequestSummary[];

@@ -1,5 +1,5 @@
 import { useUser, UserProfile } from "@clerk/react";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { useGetTimeOffBalances } from "@workspace/api-client-react";

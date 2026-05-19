@@ -25,5 +25,7 @@ export interface Employee {
   birthday?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  sickTimeAllotmentHours?: number | null;
   createdAt: string;
 }

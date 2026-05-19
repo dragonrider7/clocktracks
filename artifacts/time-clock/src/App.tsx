@@ -1,4 +1,4 @@
-import { useEffect, useRef, createContext, useContext } from "react";
+import { useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -17,8 +17,9 @@ import TimeOff from "@/pages/time-off";
 import Reports from "@/pages/reports";
 import Profile from "@/pages/profile";
 import Holidays from "@/pages/holidays";
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
-import type { Employee } from "@workspace/api-client-react";
+import TimeAdjustments from "@/pages/time-adjustments";
+import Admin from "@/pages/admin";
+import { MeProvider } from "@/contexts/me-context";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,58 +99,6 @@ const clerkAppearance = {
     main: "",
   },
 };
-
-// Current user context
-type MeContextType = {
-  me: Employee | undefined;
-  isLoading: boolean;
-  isAdmin: boolean;
-  isNotAuthorized: boolean;
-};
-
-const MeContext = createContext<MeContextType>({ me: undefined, isLoading: true, isAdmin: false, isNotAuthorized: false });
-export const useMe = () => useContext(MeContext);
-
-function MeProvider({ children }: { children: React.ReactNode }) {
-  const { isSignedIn } = useUser();
-  const { signOut } = useClerk();
-  const { data: me, isLoading, error } = useGetMe({
-    query: {
-      enabled: !!isSignedIn,
-      queryKey: getGetMeQueryKey(),
-      retry: false,
-    },
-  });
-
-  // 403 = signed-in user has no matching employee record
-  const isNotAuthorized = !isLoading && (error as { status?: number } | null)?.status === 403;
-
-  if (isNotAuthorized) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-6 px-4 text-center">
-        <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-12 w-12 opacity-60" />
-        <div className="space-y-2">
-          <h1 className="text-xl font-semibold text-foreground">Access not set up yet</h1>
-          <p className="text-muted-foreground max-w-sm">
-            Your account hasn't been added to this system. Please ask your administrator to add your email address as an employee, then sign in again.
-          </p>
-        </div>
-        <button
-          onClick={() => signOut({ redirectUrl: basePath || "/" })}
-          className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
-        >
-          Sign out
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <MeContext.Provider value={{ me, isLoading, isAdmin: me?.role === "admin", isNotAuthorized: false }}>
-      {children}
-    </MeContext.Provider>
-  );
-}
 
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
@@ -291,6 +240,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
             <Route path="/holidays" component={() => <ProtectedRoute component={Holidays} />} />
             <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+            <Route path="/time-adjustments" component={() => <ProtectedRoute component={TimeAdjustments} />} />
+            <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />

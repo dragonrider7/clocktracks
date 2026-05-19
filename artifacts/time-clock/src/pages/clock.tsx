@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, LogIn, LogOut } from "lucide-react";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 
 export default function ClockPage() {

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, timeOffRequestsTable, employeesTable } from "@workspace/db";
+import { db, timeOffRequestsTable, employeesTable, notificationsTable } from "@workspace/db";
 import {
   ListTimeOffRequestsQueryParams,
   CreateTimeOffRequestBody,
@@ -89,6 +89,25 @@ router.post("/time-off-requests", async (req, res): Promise<void> => {
       status: "pending",
     })
     .returning();
+
+  const admins = await db.select().from(employeesTable).where(eq(employeesTable.role, "admin"));
+  if (admins.length > 0) {
+    const typeLabels: Record<string, string> = {
+      vacation: "Vacation", pto: "PTO", sick: "Sick Day",
+      bereavement: "Bereavement", personal: "Personal", other: "Other",
+    };
+    await db.insert(notificationsTable).values(
+      admins.map((admin) => ({
+        recipientEmployeeId: admin.id,
+        type: "time_off_request",
+        title: "New Time Off Request",
+        message: `${employee.name} requested ${typeLabels[parsed.data.type] ?? parsed.data.type} from ${parsed.data.startDate} to ${parsed.data.endDate}.`,
+        relatedId: request.id,
+        relatedType: "time_off_request",
+        read: false,
+      }))
+    );
+  }
 
   res.status(201).json(formatRequest(request, employee.name, null));
 });

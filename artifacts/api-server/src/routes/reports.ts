@@ -244,6 +244,8 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
     ? employees.filter((e) => e.id === parseInt(employeeId as string))
     : employees;
 
+  const SICK_TYPES = new Set(["sick", "bereavement"]);
+
   const result = filtered.map((emp) => {
     const empReqs = requests
       .filter((r) => r.employeeId === emp.id && r.status !== "denied")
@@ -252,16 +254,26 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
     const breakdownMap: Record<string, { usedHours: number; plannedHours: number }> = {};
     let usedHours = 0;
     let plannedHours = 0;
+    let sickUsedHours = 0;
+    let sickPlannedHours = 0;
 
     for (const r of empReqs) {
       const hours = calcDays(r.startDate, r.endDate) * 8;
       if (!breakdownMap[r.type]) breakdownMap[r.type] = { usedHours: 0, plannedHours: 0 };
       if (r.status === "approved") {
         breakdownMap[r.type].usedHours += hours;
-        usedHours += hours;
+        if (SICK_TYPES.has(r.type)) {
+          if (r.type === "sick") sickUsedHours += hours;
+        } else {
+          usedHours += hours;
+        }
       } else if (r.status === "pending") {
         breakdownMap[r.type].plannedHours += hours;
-        plannedHours += hours;
+        if (SICK_TYPES.has(r.type)) {
+          if (r.type === "sick") sickPlannedHours += hours;
+        } else {
+          plannedHours += hours;
+        }
       }
     }
 
@@ -284,6 +296,7 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
     }));
 
     const allottedHours = emp.timeOffAllotmentHours ?? 80;
+    const sickTimeAllotmentHours = emp.sickTimeAllotmentHours ?? 40;
     return {
       employeeId: emp.id,
       employeeName: emp.name,
@@ -294,6 +307,10 @@ router.get("/reports/time-off-balances", async (req, res): Promise<void> => {
       plannedHours,
       remainingHours: Math.max(0, allottedHours - usedHours),
       usedPlusPlannedHours: usedHours + plannedHours,
+      sickTimeAllotmentHours,
+      sickUsedHours,
+      sickPlannedHours,
+      sickRemainingHours: Math.max(0, sickTimeAllotmentHours - sickUsedHours),
       year: yearNum,
       breakdown,
       requests: requestSummaries,

@@ -22,6 +22,7 @@ export const GetMeResponse = zod.object({
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
+  "sickTimeAllotmentHours": zod.number().nullish(),
   "createdAt": zod.string()
 })
 
@@ -49,6 +50,7 @@ export const ListEmployeesResponseItem = zod.object({
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
+  "sickTimeAllotmentHours": zod.number().nullish(),
   "createdAt": zod.string()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -67,6 +69,7 @@ export const CreateEmployeeBody = zod.object({
   "department": zod.string().optional(),
   "email": zod.string().optional(),
   "timeOffAllotmentHours": zod.number().optional(),
+  "sickTimeAllotmentHours": zod.number().optional(),
   "hiredDate": zod.string().optional(),
   "birthday": zod.string().optional()
 })
@@ -90,6 +93,7 @@ export const GetEmployeeResponse = zod.object({
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
+  "sickTimeAllotmentHours": zod.number().nullish(),
   "createdAt": zod.string()
 })
 
@@ -111,6 +115,7 @@ export const UpdateEmployeeBody = zod.object({
   "department": zod.string().optional(),
   "email": zod.string().optional(),
   "timeOffAllotmentHours": zod.number().optional(),
+  "sickTimeAllotmentHours": zod.number().optional(),
   "hiredDate": zod.string().optional(),
   "birthday": zod.string().optional()
 })
@@ -126,6 +131,7 @@ export const UpdateEmployeeResponse = zod.object({
   "hiredDate": zod.string().nullish(),
   "birthday": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
+  "sickTimeAllotmentHours": zod.number().nullish(),
   "createdAt": zod.string()
 })
 
@@ -424,6 +430,10 @@ export const GetTimeOffBalancesResponseItem = zod.object({
   "plannedHours": zod.number(),
   "remainingHours": zod.number(),
   "usedPlusPlannedHours": zod.number(),
+  "sickTimeAllotmentHours": zod.number(),
+  "sickUsedHours": zod.number(),
+  "sickPlannedHours": zod.number(),
+  "sickRemainingHours": zod.number(),
   "year": zod.number(),
   "breakdown": zod.array(zod.object({
   "type": zod.string(),
@@ -523,6 +533,147 @@ export const CreateHolidayBody = zod.object({
 export const SeedHolidaysResponse = zod.object({
   "created": zod.number(),
   "skipped": zod.number()
+})
+
+
+/**
+ * @summary List time adjustment requests
+ */
+export const ListTimeAdjustmentsQueryParams = zod.object({
+  "employeeId": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListTimeAdjustmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "timeEntryId": zod.number().nullish(),
+  "requestType": zod.enum(['new', 'edit', 'delete']),
+  "requestedDate": zod.string().nullish(),
+  "requestedClockIn": zod.string().nullish(),
+  "requestedClockOut": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "adminNotes": zod.string().nullish(),
+  "reviewedBy": zod.number().nullish(),
+  "reviewedByName": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListTimeAdjustmentsResponse = zod.array(ListTimeAdjustmentsResponseItem)
+
+
+/**
+ * @summary Submit a time adjustment request
+ */
+export const CreateTimeAdjustmentBody = zod.object({
+  "employeeId": zod.number(),
+  "timeEntryId": zod.number().optional(),
+  "requestType": zod.enum(['new', 'edit', 'delete']),
+  "requestedDate": zod.string().optional(),
+  "requestedClockIn": zod.string().optional(),
+  "requestedClockOut": zod.string().optional(),
+  "reason": zod.string().optional()
+})
+
+
+/**
+ * @summary Approve or deny a time adjustment request (admin)
+ */
+export const ReviewTimeAdjustmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewTimeAdjustmentBody = zod.object({
+  "status": zod.enum(['approved', 'denied']),
+  "reviewedBy": zod.number(),
+  "adminNotes": zod.string().optional()
+})
+
+export const ReviewTimeAdjustmentResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "timeEntryId": zod.number().nullish(),
+  "requestType": zod.enum(['new', 'edit', 'delete']),
+  "requestedDate": zod.string().nullish(),
+  "requestedClockIn": zod.string().nullish(),
+  "requestedClockOut": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['pending', 'approved', 'denied']),
+  "adminNotes": zod.string().nullish(),
+  "reviewedBy": zod.number().nullish(),
+  "reviewedByName": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List notifications for the given employee
+ */
+export const ListNotificationsQueryParams = zod.object({
+  "employeeId": zod.coerce.number()
+})
+
+export const ListNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "recipientEmployeeId": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "relatedId": zod.number().nullish(),
+  "relatedType": zod.string().nullish(),
+  "read": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
+
+
+/**
+ * @summary Get unread notification count for an employee
+ */
+export const GetUnreadNotificationCountQueryParams = zod.object({
+  "employeeId": zod.coerce.number()
+})
+
+export const GetUnreadNotificationCountResponse = zod.object({
+  "count": zod.number()
+})
+
+
+/**
+ * @summary Mark all notifications as read for an employee
+ */
+export const MarkAllNotificationsReadBody = zod.object({
+  "employeeId": zod.number()
+})
+
+export const MarkAllNotificationsReadResponse = zod.object({
+  "count": zod.number()
+})
+
+
+/**
+ * @summary Mark a single notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkNotificationReadResponse = zod.object({
+  "id": zod.number(),
+  "recipientEmployeeId": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "relatedId": zod.number().nullish(),
+  "relatedType": zod.string().nullish(),
+  "read": zod.boolean(),
+  "createdAt": zod.string()
 })
 
 

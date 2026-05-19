@@ -10,7 +10,7 @@ import { Trash2, UserPlus, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Redirect } from "wouter";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 
 const DEFAULT_ALLOTMENT = 80;

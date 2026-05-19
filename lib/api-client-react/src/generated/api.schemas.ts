@@ -35,6 +35,8 @@ export interface Employee {
   birthday?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  sickTimeAllotmentHours?: number | null;
   createdAt: string;
 }
 
@@ -54,6 +56,7 @@ export interface EmployeeInput {
   department?: string;
   email?: string;
   timeOffAllotmentHours?: number;
+  sickTimeAllotmentHours?: number;
   hiredDate?: string;
   birthday?: string;
 }
@@ -74,6 +77,7 @@ export interface EmployeeUpdate {
   department?: string;
   email?: string;
   timeOffAllotmentHours?: number;
+  sickTimeAllotmentHours?: number;
   hiredDate?: string;
   birthday?: string;
 }
@@ -417,9 +421,116 @@ export interface TimeOffBalance {
   plannedHours: number;
   remainingHours: number;
   usedPlusPlannedHours: number;
+  sickTimeAllotmentHours: number;
+  sickUsedHours: number;
+  sickPlannedHours: number;
+  sickRemainingHours: number;
   year: number;
   breakdown: TimeOffTypeBreakdown[];
   requests: TimeOffRequestSummary[];
+}
+
+export type TimeAdjustmentRequestRequestType = typeof TimeAdjustmentRequestRequestType[keyof typeof TimeAdjustmentRequestRequestType];
+
+
+export const TimeAdjustmentRequestRequestType = {
+  new: 'new',
+  edit: 'edit',
+  delete: 'delete',
+} as const;
+
+export type TimeAdjustmentRequestStatus = typeof TimeAdjustmentRequestStatus[keyof typeof TimeAdjustmentRequestStatus];
+
+
+export const TimeAdjustmentRequestStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  denied: 'denied',
+} as const;
+
+export interface TimeAdjustmentRequest {
+  id: number;
+  employeeId: number;
+  /** @nullable */
+  employeeName?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  timeEntryId?: number | null;
+  requestType: TimeAdjustmentRequestRequestType;
+  /** @nullable */
+  requestedDate?: string | null;
+  /** @nullable */
+  requestedClockIn?: string | null;
+  /** @nullable */
+  requestedClockOut?: string | null;
+  /** @nullable */
+  reason?: string | null;
+  status: TimeAdjustmentRequestStatus;
+  /** @nullable */
+  adminNotes?: string | null;
+  /** @nullable */
+  reviewedBy?: number | null;
+  /** @nullable */
+  reviewedByName?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  createdAt: string;
+}
+
+export type TimeAdjustmentRequestInputRequestType = typeof TimeAdjustmentRequestInputRequestType[keyof typeof TimeAdjustmentRequestInputRequestType];
+
+
+export const TimeAdjustmentRequestInputRequestType = {
+  new: 'new',
+  edit: 'edit',
+  delete: 'delete',
+} as const;
+
+export interface TimeAdjustmentRequestInput {
+  employeeId: number;
+  timeEntryId?: number;
+  requestType: TimeAdjustmentRequestInputRequestType;
+  requestedDate?: string;
+  requestedClockIn?: string;
+  requestedClockOut?: string;
+  reason?: string;
+}
+
+export type TimeAdjustmentReviewStatus = typeof TimeAdjustmentReviewStatus[keyof typeof TimeAdjustmentReviewStatus];
+
+
+export const TimeAdjustmentReviewStatus = {
+  approved: 'approved',
+  denied: 'denied',
+} as const;
+
+export interface TimeAdjustmentReview {
+  status: TimeAdjustmentReviewStatus;
+  reviewedBy: number;
+  adminNotes?: string;
+}
+
+export interface Notification {
+  id: number;
+  recipientEmployeeId: number;
+  type: string;
+  title: string;
+  message: string;
+  /** @nullable */
+  relatedId?: number | null;
+  /** @nullable */
+  relatedType?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface UnreadNotificationCount {
+  count: number;
+}
+
+export interface MarkAllReadBody {
+  employeeId: number;
 }
 
 export interface EmployeeTimesheet {
@@ -463,5 +574,18 @@ export type GetTimesheetReportParams = {
 startDate: string;
 endDate: string;
 employeeId?: number;
+};
+
+export type ListTimeAdjustmentsParams = {
+employeeId?: number;
+status?: string;
+};
+
+export type ListNotificationsParams = {
+employeeId: number;
+};
+
+export type GetUnreadNotificationCountParams = {
+employeeId: number;
 };
 

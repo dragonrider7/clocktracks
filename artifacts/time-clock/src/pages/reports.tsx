@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, ChevronDown, ChevronUp, Clock4, Umbrella, CalendarDays } from "lucide-react";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 import { Redirect } from "wouter";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 

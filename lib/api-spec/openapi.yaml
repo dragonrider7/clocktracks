@@ -22,6 +22,10 @@ tags:
     description: Dashboard and summary endpoints
   - name: reports
     description: Admin reporting and timesheet exports
+  - name: timeAdjustments
+    description: Employee time adjustment requests
+  - name: notifications
+    description: In-app notifications for admins and employees
 
 paths:
   /me:
@@ -574,6 +578,158 @@ paths:
               schema:
                 $ref: "#/components/schemas/SeedHolidaysResult"
 
+  /time-adjustments:
+    get:
+      operationId: listTimeAdjustments
+      tags: [timeAdjustments]
+      summary: List time adjustment requests
+      parameters:
+        - name: employeeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of adjustment requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeAdjustmentRequest"
+    post:
+      operationId: createTimeAdjustment
+      tags: [timeAdjustments]
+      summary: Submit a time adjustment request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeAdjustmentRequestInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeAdjustmentRequest"
+        "400":
+          description: Invalid input
+
+  /time-adjustments/{id}:
+    patch:
+      operationId: reviewTimeAdjustment
+      tags: [timeAdjustments]
+      summary: Approve or deny a time adjustment request (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeAdjustmentReview"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeAdjustmentRequest"
+        "404":
+          description: Not found
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for the given employee
+      parameters:
+        - name: employeeId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadNotificationCount
+      tags: [notifications]
+      summary: Get unread notification count for an employee
+      parameters:
+        - name: employeeId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadNotificationCount"
+
+  /notifications/mark-all-read:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read for an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkAllReadBody"
+      responses:
+        "200":
+          description: Updated count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadNotificationCount"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a single notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "404":
+          description: Not found
+
   /holidays/{id}:
     patch:
       operationId: updateHoliday
@@ -651,6 +807,8 @@ components:
           type: ["string", "null"]
         imageUrl:
           type: ["string", "null"]
+        sickTimeAllotmentHours:
+          type: ["integer", "null"]
         createdAt:
           type: string
 
@@ -671,6 +829,8 @@ components:
         email:
           type: string
         timeOffAllotmentHours:
+          type: integer
+        sickTimeAllotmentHours:
           type: integer
         hiredDate:
           type: string
@@ -693,6 +853,8 @@ components:
         email:
           type: string
         timeOffAllotmentHours:
+          type: integer
+        sickTimeAllotmentHours:
           type: integer
         hiredDate:
           type: string
@@ -1069,7 +1231,7 @@ components:
 
     TimeOffBalance:
       type: object
-      required: [employeeId, employeeName, allottedHours, usedHours, plannedHours, remainingHours, usedPlusPlannedHours, year, breakdown, requests]
+      required: [employeeId, employeeName, allottedHours, usedHours, plannedHours, remainingHours, usedPlusPlannedHours, year, breakdown, requests, sickTimeAllotmentHours, sickUsedHours, sickPlannedHours, sickRemainingHours]
       properties:
         employeeId:
           type: integer
@@ -1089,6 +1251,14 @@ components:
           type: number
         usedPlusPlannedHours:
           type: number
+        sickTimeAllotmentHours:
+          type: integer
+        sickUsedHours:
+          type: number
+        sickPlannedHours:
+          type: number
+        sickRemainingHours:
+          type: number
         year:
           type: integer
         breakdown:
@@ -1099,6 +1269,114 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TimeOffRequestSummary"
+
+    TimeAdjustmentRequest:
+      type: object
+      required: [id, employeeId, requestType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        timeEntryId:
+          type: ["integer", "null"]
+        requestType:
+          type: string
+          enum: [new, edit, delete]
+        requestedDate:
+          type: ["string", "null"]
+        requestedClockIn:
+          type: ["string", "null"]
+        requestedClockOut:
+          type: ["string", "null"]
+        reason:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, denied]
+        adminNotes:
+          type: ["string", "null"]
+        reviewedBy:
+          type: ["integer", "null"]
+        reviewedByName:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    TimeAdjustmentRequestInput:
+      type: object
+      required: [employeeId, requestType]
+      properties:
+        employeeId:
+          type: integer
+        timeEntryId:
+          type: integer
+        requestType:
+          type: string
+          enum: [new, edit, delete]
+        requestedDate:
+          type: string
+        requestedClockIn:
+          type: string
+        requestedClockOut:
+          type: string
+        reason:
+          type: string
+
+    TimeAdjustmentReview:
+      type: object
+      required: [status, reviewedBy]
+      properties:
+        status:
+          type: string
+          enum: [approved, denied]
+        reviewedBy:
+          type: integer
+        adminNotes:
+          type: string
+
+    Notification:
+      type: object
+      required: [id, recipientEmployeeId, type, title, message, read, createdAt]
+      properties:
+        id:
+          type: integer
+        recipientEmployeeId:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        relatedId:
+          type: ["integer", "null"]
+        relatedType:
+          type: ["string", "null"]
+        read:
+          type: boolean
+        createdAt:
+          type: string
+
+    UnreadNotificationCount:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+
+    MarkAllReadBody:
+      type: object
+      required: [employeeId]
+      properties:
+        employeeId:
+          type: integer
 
     EmployeeTimesheet:
       type: object

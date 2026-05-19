@@ -1,9 +1,18 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check } from "lucide-react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, ClipboardList, EyeOff, Eye } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 import { useTheme, THEMES } from "@/contexts/theme-context";
+import {
+  useGetUnreadNotificationCount,
+  useListNotifications,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  getGetUnreadNotificationCountQueryKey,
+  getListNotificationsQueryKey,
+} from "@workspace/api-client-react";
+import type { Notification } from "@workspace/api-client-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,14 +23,130 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import { useQueryClient } from "@tanstack/react-query";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function NotificationBell({ employeeId }: { employeeId: number | undefined }) {
+  const queryClient = useQueryClient();
+  const countParams = employeeId ? { employeeId } : { employeeId: 0 };
+
+  const { data: countData } = useGetUnreadNotificationCount(countParams, {
+    query: {
+      enabled: !!employeeId,
+      queryKey: getGetUnreadNotificationCountQueryKey(countParams),
+      refetchInterval: 30000,
+    },
+  });
+
+  const { data: notifications } = useListNotifications(countParams, {
+    query: {
+      enabled: !!employeeId,
+      queryKey: getListNotificationsQueryKey(countParams),
+      refetchInterval: 30000,
+    },
+  });
+
+  const markAllRead = useMarkAllNotificationsRead();
+  const markOneRead = useMarkNotificationRead();
+
+  const unread = countData?.count ?? 0;
+  const recent = [...(notifications ?? [])].reverse().slice(0, 10);
+
+  const handleMarkAll = () => {
+    if (!employeeId) return;
+    markAllRead.mutate(
+      { data: { employeeId } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetUnreadNotificationCountQueryKey(countParams) });
+          queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey(countParams) });
+        },
+      }
+    );
+  };
+
+  const handleMarkOne = (n: Notification) => {
+    if (n.read) return;
+    markOneRead.mutate(
+      { id: n.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetUnreadNotificationCountQueryKey(countParams) });
+          queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey(countParams) });
+        },
+      }
+    );
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="relative flex items-center justify-center h-8 w-8 rounded-lg hover:bg-white/10 transition-colors text-white">
+          <Bell className="h-4.5 w-4.5" />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 max-h-[440px] overflow-y-auto p-0">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b">
+          <span className="text-sm font-semibold">Notifications</span>
+          {unread > 0 && (
+            <button
+              onClick={handleMarkAll}
+              className="text-xs text-primary hover:underline"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
+        {recent.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">No notifications</div>
+        ) : (
+          recent.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => handleMarkOne(n)}
+              className={`w-full text-left px-3 py-2.5 border-b last:border-0 hover:bg-muted/50 transition-colors ${!n.read ? "bg-blue-50/60 dark:bg-blue-950/20" : ""}`}
+            >
+              <div className="flex items-start gap-2">
+                {!n.read && (
+                  <span className="mt-1.5 h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                )}
+                {n.read && <span className="mt-1.5 h-2 w-2 shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold truncate">{n.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo(n.createdAt)}</p>
+                </div>
+              </div>
+            </button>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { signOut } = useClerk();
   const { user, isLoaded } = useUser();
-  const { me, isAdmin } = useMe();
+  const { me, isAdmin, isViewingAsEmployee, setIsViewingAsEmployee } = useMe();
+  const isActualAdmin = me?.role === "admin";
   const { theme, setTheme } = useTheme();
   const [imgError, setImgError] = useState(false);
 
@@ -31,8 +156,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/employees", label: "Employees", icon: Users, adminOnly: true },
     { href: "/time-entries", label: "Time Log", icon: Table2, adminOnly: false },
     { href: "/time-off", label: "Time Off", icon: Calendar, adminOnly: false },
+    { href: "/time-adjustments", label: "Adjustments", icon: ClipboardList, adminOnly: false },
     { href: "/holidays", label: "Holidays", icon: Gift, adminOnly: true },
     { href: "/reports", label: "Reports", icon: FileBarChart, adminOnly: true },
+    { href: "/admin", label: "Admin", icon: Settings, adminOnly: true },
   ].filter((item) => !item.adminOnly || isAdmin);
 
   const initials = me?.name
@@ -65,6 +192,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      {isViewingAsEmployee && (
+        <div className="bg-amber-100 border-b border-amber-300 px-4 py-2 text-sm text-amber-900 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <EyeOff className="h-4 w-4" />
+            <span className="font-medium">Employee View Mode</span>
+            <span className="text-amber-700">— Admin features are hidden. You are seeing the app as an employee.</span>
+          </div>
+          <button
+            onClick={() => setIsViewingAsEmployee(false)}
+            className="text-amber-900 font-semibold hover:underline flex items-center gap-1 text-xs"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Return to Admin View
+          </button>
+        </div>
+      )}
+
       <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 mt-4">
         <div
           className="flex w-full items-center p-3 px-4 rounded-xl shadow-md justify-between"
@@ -97,73 +241,91 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2">
+            {isActualAdmin && (
               <button
-                data-testid="button-user-menu"
-                className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-white/10 transition-colors text-white"
+                onClick={() => setIsViewingAsEmployee(!isViewingAsEmployee)}
+                title={isViewingAsEmployee ? "Return to Admin View" : "Preview Employee View"}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  isViewingAsEmployee
+                    ? "bg-amber-400/90 text-amber-900 hover:bg-amber-400"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
+                }`}
               >
-                <Avatar size="sm" />
-                <span className="hidden sm:block">{me?.name ?? "Loading..."}</span>
-                {isAdmin && (
-                  <span className="hidden sm:block text-xs bg-white/20 text-white px-1.5 py-0.5 rounded">
-                    Admin
-                  </span>
-                )}
-                <ChevronDown className="h-3.5 w-3.5 text-white/70" />
+                {isViewingAsEmployee ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                <span className="hidden sm:block">{isViewingAsEmployee ? "Exit Preview" : "Employee View"}</span>
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {/* Profile header */}
-              <div
-                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/60 rounded-sm transition-colors"
-                onClick={() => setLocation("/profile")}
-              >
-                <Avatar size="lg" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{me?.name ?? "..."}</p>
-                  <p className="text-xs text-muted-foreground truncate">{me?.email ?? me?.department ?? ""}</p>
+            )}
+
+            <NotificationBell employeeId={me?.id} />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  data-testid="button-user-menu"
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-white/10 transition-colors text-white"
+                >
+                  <Avatar size="sm" />
+                  <span className="hidden sm:block">{me?.name ?? "Loading..."}</span>
+                  {isAdmin && (
+                    <span className="hidden sm:block text-xs bg-white/20 text-white px-1.5 py-0.5 rounded">
+                      Admin
+                    </span>
+                  )}
+                  <ChevronDown className="h-3.5 w-3.5 text-white/70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div
+                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/60 rounded-sm transition-colors"
+                  onClick={() => setLocation("/profile")}
+                >
+                  <Avatar size="lg" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{me?.name ?? "..."}</p>
+                    <p className="text-xs text-muted-foreground truncate">{me?.email ?? me?.department ?? ""}</p>
+                  </div>
                 </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setLocation("/profile")}
-                className="cursor-pointer gap-2"
-              >
-                <UserCircle className="h-4 w-4" />
-                My Profile
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
-                  <Palette className="h-4 w-4" />
-                  <span>Theme</span>
-                  <span className={`ml-auto h-3 w-3 rounded-full ${currentTheme.dot}`} />
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-40">
-                  {THEMES.map((t) => (
-                    <DropdownMenuItem
-                      key={t.value}
-                      onClick={() => setTheme(t.value)}
-                      className="flex items-center gap-2.5 cursor-pointer"
-                    >
-                      <span className={`h-3.5 w-3.5 rounded-full border-2 ${t.dot} border-opacity-60`} />
-                      <span>{t.label}</span>
-                      {theme === t.value && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                data-testid="button-sign-out"
-                onClick={() => signOut({ redirectUrl: basePath || "/" })}
-                className="text-destructive focus:text-destructive cursor-pointer"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setLocation("/profile")}
+                  className="cursor-pointer gap-2"
+                >
+                  <UserCircle className="h-4 w-4" />
+                  My Profile
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                    <Palette className="h-4 w-4" />
+                    <span>Theme</span>
+                    <span className={`ml-auto h-3 w-3 rounded-full ${currentTheme.dot}`} />
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-40">
+                    {THEMES.map((t) => (
+                      <DropdownMenuItem
+                        key={t.value}
+                        onClick={() => setTheme(t.value)}
+                        className="flex items-center gap-2.5 cursor-pointer"
+                      >
+                        <span className={`h-3.5 w-3.5 rounded-full border-2 ${t.dot} border-opacity-60`} />
+                        <span>{t.label}</span>
+                        {theme === t.value && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  data-testid="button-sign-out"
+                  onClick={() => signOut({ redirectUrl: basePath || "/" })}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
       <main className="flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 lg:p-8">

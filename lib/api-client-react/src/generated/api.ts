@@ -30,22 +30,31 @@ import type {
   EmployeeWeeklyHours,
   GetTimeOffBalancesParams,
   GetTimesheetReportParams,
+  GetUnreadNotificationCountParams,
   HealthStatus,
   Holiday,
   HolidayInput,
   HolidayUpdate,
+  ListNotificationsParams,
+  ListTimeAdjustmentsParams,
   ListTimeEntriesParams,
   ListTimeOffRequestsParams,
   ManualTimeEntryInput,
+  MarkAllReadBody,
+  Notification,
   OutThisWeekEntry,
   PendingRequestsCount,
   SeedHolidaysResult,
+  TimeAdjustmentRequest,
+  TimeAdjustmentRequestInput,
+  TimeAdjustmentReview,
   TimeEntry,
   TimeEntryUpdate,
   TimeOffBalance,
   TimeOffRequest,
   TimeOffRequestInput,
   TimeOffReview,
+  UnreadNotificationCount,
   UpcomingEvent
 } from './api.schemas';
 
@@ -2166,6 +2175,542 @@ export const useSeedHolidays = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSeedHolidaysMutationOptions(options));
+    }
+
+export const getListTimeAdjustmentsUrl = (params?: ListTimeAdjustmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/time-adjustments?${stringifiedParams}` : `/api/time-adjustments`
+}
+
+/**
+ * @summary List time adjustment requests
+ */
+export const listTimeAdjustments = async (params?: ListTimeAdjustmentsParams, options?: RequestInit): Promise<TimeAdjustmentRequest[]> => {
+
+  return customFetch<TimeAdjustmentRequest[]>(getListTimeAdjustmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTimeAdjustmentsQueryKey = (params?: ListTimeAdjustmentsParams,) => {
+    return [
+    `/api/time-adjustments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListTimeAdjustmentsQueryOptions = <TData = Awaited<ReturnType<typeof listTimeAdjustments>>, TError = ErrorType<unknown>>(params?: ListTimeAdjustmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTimeAdjustments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTimeAdjustmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTimeAdjustments>>> = ({ signal }) => listTimeAdjustments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTimeAdjustments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTimeAdjustmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listTimeAdjustments>>>
+export type ListTimeAdjustmentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List time adjustment requests
+ */
+
+export function useListTimeAdjustments<TData = Awaited<ReturnType<typeof listTimeAdjustments>>, TError = ErrorType<unknown>>(
+ params?: ListTimeAdjustmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTimeAdjustments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTimeAdjustmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTimeAdjustmentUrl = () => {
+
+
+
+
+  return `/api/time-adjustments`
+}
+
+/**
+ * @summary Submit a time adjustment request
+ */
+export const createTimeAdjustment = async (timeAdjustmentRequestInput: TimeAdjustmentRequestInput, options?: RequestInit): Promise<TimeAdjustmentRequest> => {
+
+  return customFetch<TimeAdjustmentRequest>(getCreateTimeAdjustmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      timeAdjustmentRequestInput,)
+  }
+);}
+
+
+
+
+export const getCreateTimeAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTimeAdjustment>>, TError,{data: BodyType<TimeAdjustmentRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTimeAdjustment>>, TError,{data: BodyType<TimeAdjustmentRequestInput>}, TContext> => {
+
+const mutationKey = ['createTimeAdjustment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTimeAdjustment>>, {data: BodyType<TimeAdjustmentRequestInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTimeAdjustment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTimeAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof createTimeAdjustment>>>
+    export type CreateTimeAdjustmentMutationBody = BodyType<TimeAdjustmentRequestInput>
+    export type CreateTimeAdjustmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Submit a time adjustment request
+ */
+export const useCreateTimeAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTimeAdjustment>>, TError,{data: BodyType<TimeAdjustmentRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTimeAdjustment>>,
+        TError,
+        {data: BodyType<TimeAdjustmentRequestInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTimeAdjustmentMutationOptions(options));
+    }
+
+export const getReviewTimeAdjustmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/time-adjustments/${id}`
+}
+
+/**
+ * @summary Approve or deny a time adjustment request (admin)
+ */
+export const reviewTimeAdjustment = async (id: number,
+    timeAdjustmentReview: TimeAdjustmentReview, options?: RequestInit): Promise<TimeAdjustmentRequest> => {
+
+  return customFetch<TimeAdjustmentRequest>(getReviewTimeAdjustmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      timeAdjustmentReview,)
+  }
+);}
+
+
+
+
+export const getReviewTimeAdjustmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewTimeAdjustment>>, TError,{id: number;data: BodyType<TimeAdjustmentReview>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewTimeAdjustment>>, TError,{id: number;data: BodyType<TimeAdjustmentReview>}, TContext> => {
+
+const mutationKey = ['reviewTimeAdjustment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewTimeAdjustment>>, {id: number;data: BodyType<TimeAdjustmentReview>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewTimeAdjustment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewTimeAdjustmentMutationResult = NonNullable<Awaited<ReturnType<typeof reviewTimeAdjustment>>>
+    export type ReviewTimeAdjustmentMutationBody = BodyType<TimeAdjustmentReview>
+    export type ReviewTimeAdjustmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve or deny a time adjustment request (admin)
+ */
+export const useReviewTimeAdjustment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewTimeAdjustment>>, TError,{id: number;data: BodyType<TimeAdjustmentReview>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewTimeAdjustment>>,
+        TError,
+        {id: number;data: BodyType<TimeAdjustmentReview>},
+        TContext
+      > => {
+      return useMutation(getReviewTimeAdjustmentMutationOptions(options));
+    }
+
+export const getListNotificationsUrl = (params: ListNotificationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/notifications?${stringifiedParams}` : `/api/notifications`
+}
+
+/**
+ * @summary List notifications for the given employee
+ */
+export const listNotifications = async (params: ListNotificationsParams, options?: RequestInit): Promise<Notification[]> => {
+
+  return customFetch<Notification[]>(getListNotificationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNotificationsQueryKey = (params?: ListNotificationsParams,) => {
+    return [
+    `/api/notifications`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>(params: ListNotificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNotificationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotifications>>> = ({ signal }) => listNotifications(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
+export type ListNotificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List notifications for the given employee
+ */
+
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>(
+ params: ListNotificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNotificationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetUnreadNotificationCountUrl = (params: GetUnreadNotificationCountParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/notifications/unread-count?${stringifiedParams}` : `/api/notifications/unread-count`
+}
+
+/**
+ * @summary Get unread notification count for an employee
+ */
+export const getUnreadNotificationCount = async (params: GetUnreadNotificationCountParams, options?: RequestInit): Promise<UnreadNotificationCount> => {
+
+  return customFetch<UnreadNotificationCount>(getGetUnreadNotificationCountUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUnreadNotificationCountQueryKey = (params?: GetUnreadNotificationCountParams,) => {
+    return [
+    `/api/notifications/unread-count`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetUnreadNotificationCountQueryOptions = <TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError = ErrorType<unknown>>(params: GetUnreadNotificationCountParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUnreadNotificationCountQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUnreadNotificationCount>>> = ({ signal }) => getUnreadNotificationCount(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUnreadNotificationCountQueryResult = NonNullable<Awaited<ReturnType<typeof getUnreadNotificationCount>>>
+export type GetUnreadNotificationCountQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get unread notification count for an employee
+ */
+
+export function useGetUnreadNotificationCount<TData = Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError = ErrorType<unknown>>(
+ params: GetUnreadNotificationCountParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUnreadNotificationCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUnreadNotificationCountQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getMarkAllNotificationsReadUrl = () => {
+
+
+
+
+  return `/api/notifications/mark-all-read`
+}
+
+/**
+ * @summary Mark all notifications as read for an employee
+ */
+export const markAllNotificationsRead = async (markAllReadBody: MarkAllReadBody, options?: RequestInit): Promise<UnreadNotificationCount> => {
+
+  return customFetch<UnreadNotificationCount>(getMarkAllNotificationsReadUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      markAllReadBody,)
+  }
+);}
+
+
+
+
+export const getMarkAllNotificationsReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsRead>>, TError,{data: BodyType<MarkAllReadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsRead>>, TError,{data: BodyType<MarkAllReadBody>}, TContext> => {
+
+const mutationKey = ['markAllNotificationsRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markAllNotificationsRead>>, {data: BodyType<MarkAllReadBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  markAllNotificationsRead(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkAllNotificationsReadMutationResult = NonNullable<Awaited<ReturnType<typeof markAllNotificationsRead>>>
+    export type MarkAllNotificationsReadMutationBody = BodyType<MarkAllReadBody>
+    export type MarkAllNotificationsReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark all notifications as read for an employee
+ */
+export const useMarkAllNotificationsRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllNotificationsRead>>, TError,{data: BodyType<MarkAllReadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markAllNotificationsRead>>,
+        TError,
+        {data: BodyType<MarkAllReadBody>},
+        TContext
+      > => {
+      return useMutation(getMarkAllNotificationsReadMutationOptions(options));
+    }
+
+export const getMarkNotificationReadUrl = (id: number,) => {
+
+
+
+
+  return `/api/notifications/${id}/read`
+}
+
+/**
+ * @summary Mark a single notification as read
+ */
+export const markNotificationRead = async (id: number, options?: RequestInit): Promise<Notification> => {
+
+  return customFetch<Notification>(getMarkNotificationReadUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getMarkNotificationReadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markNotificationRead>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markNotificationRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markNotificationRead>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markNotificationRead(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkNotificationReadMutationResult = NonNullable<Awaited<ReturnType<typeof markNotificationRead>>>
+
+    export type MarkNotificationReadMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark a single notification as read
+ */
+export const useMarkNotificationRead = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markNotificationRead>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markNotificationRead>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkNotificationReadMutationOptions(options));
     }
 
 export const getUpdateHolidayUrl = (id: number,) => {

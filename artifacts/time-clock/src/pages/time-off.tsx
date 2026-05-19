@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Plus, List, CalendarDays, ChevronLeft, ChevronRight, Gift } from "lucide-react";
-import { useMe } from "@/App";
+import { useMe } from "@/contexts/me-context";
 
 type TimeOffType = "vacation" | "pto" | "sick" | "bereavement" | "personal" | "other";
 
@@ -197,44 +197,83 @@ function BalanceWidget({ employeeId }: { employeeId: number | undefined }) {
   const pctPlanned = allotted > 0 ? Math.min(100 - pctUsed, (b.plannedHours / allotted) * 100) : 0;
   const overBudget = b.usedPlusPlannedHours > allotted;
 
+  const sickAllotted = b.sickTimeAllotmentHours;
+  const sickPctUsed = sickAllotted > 0 ? Math.min(100, (b.sickUsedHours / sickAllotted) * 100) : 0;
+  const sickPctPlanned = sickAllotted > 0 ? Math.min(100 - sickPctUsed, (b.sickPlannedHours / sickAllotted) * 100) : 0;
+
   return (
-    <Card className="overflow-hidden">
-      <div className="h-1 w-full bg-muted overflow-hidden">
-        <div className="h-full flex">
-          <div className="bg-blue-500 h-full transition-all" style={{ width: `${pctUsed}%` }} />
-          <div className="bg-amber-400 h-full transition-all" style={{ width: `${pctPlanned}%` }} />
-        </div>
-      </div>
-      <CardContent className="py-3 px-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <span className="text-sm font-semibold text-muted-foreground">My Time Off Balance</span>
-          <div className="flex flex-wrap gap-5 text-sm">
-            <div className="text-center">
-              <div className="text-base font-bold">{fmtHours(allotted)}</div>
-              <div className="text-xs text-muted-foreground">Allotted</div>
-            </div>
-            <div className="text-center">
-              <div className="text-base font-bold text-blue-600">{fmtHours(b.usedHours)}</div>
-              <div className="text-xs text-muted-foreground">Used</div>
-            </div>
-            <div className="text-center">
-              <div className="text-base font-bold text-amber-500">{fmtHours(b.plannedHours)}</div>
-              <div className="text-xs text-muted-foreground">Planned</div>
-            </div>
-            <div className="text-center">
-              <div className="text-base font-bold text-emerald-600">{fmtHours(b.usedPlusPlannedHours)}</div>
-              <div className="text-xs text-muted-foreground">Used + Planned</div>
-            </div>
-            <div className="text-center border-l pl-5">
-              <div className={`text-base font-bold ${overBudget ? "text-destructive" : "text-emerald-600"}`}>
-                {overBudget ? `−${fmtHours(b.usedPlusPlannedHours - allotted)}` : fmtHours(b.remainingHours)}
-              </div>
-              <div className="text-xs text-muted-foreground">{overBudget ? "Over budget" : "Remaining"}</div>
-            </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <Card className="overflow-hidden">
+        <div className="h-1 w-full bg-muted overflow-hidden">
+          <div className="h-full flex">
+            <div className="bg-blue-500 h-full transition-all" style={{ width: `${pctUsed}%` }} />
+            <div className="bg-amber-400 h-full transition-all" style={{ width: `${pctPlanned}%` }} />
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <CardContent className="py-3 px-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <span className="text-sm font-semibold text-muted-foreground">PTO / Vacation Balance</span>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-base font-bold">{fmtHours(allotted)}</div>
+                <div className="text-xs text-muted-foreground">Allotted</div>
+              </div>
+              <div className="text-center">
+                <div className="text-base font-bold text-blue-600">{fmtHours(b.usedHours)}</div>
+                <div className="text-xs text-muted-foreground">Used</div>
+              </div>
+              <div className="text-center">
+                <div className="text-base font-bold text-amber-500">{fmtHours(b.plannedHours)}</div>
+                <div className="text-xs text-muted-foreground">Planned</div>
+              </div>
+              <div className="text-center border-l pl-4">
+                <div className={`text-base font-bold ${overBudget ? "text-destructive" : "text-emerald-600"}`}>
+                  {overBudget ? `−${fmtHours(b.usedPlusPlannedHours - allotted)}` : fmtHours(b.remainingHours)}
+                </div>
+                <div className="text-xs text-muted-foreground">{overBudget ? "Over budget" : "Remaining"}</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="h-1 w-full bg-muted overflow-hidden">
+          <div className="h-full flex">
+            <div className="bg-red-400 h-full transition-all" style={{ width: `${sickPctUsed}%` }} />
+            <div className="bg-rose-200 h-full transition-all" style={{ width: `${sickPctPlanned}%` }} />
+          </div>
+        </div>
+        <CardContent className="py-3 px-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <span className="text-sm font-semibold text-muted-foreground">Sick Time Balance</span>
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">Bereavement is unlimited — tracked separately</p>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="text-center">
+                <div className="text-base font-bold">{fmtHours(sickAllotted)}</div>
+                <div className="text-xs text-muted-foreground">Allotted</div>
+              </div>
+              <div className="text-center">
+                <div className="text-base font-bold text-red-500">{fmtHours(b.sickUsedHours)}</div>
+                <div className="text-xs text-muted-foreground">Used</div>
+              </div>
+              <div className="text-center">
+                <div className="text-base font-bold text-rose-400">{fmtHours(b.sickPlannedHours)}</div>
+                <div className="text-xs text-muted-foreground">Planned</div>
+              </div>
+              <div className="text-center border-l pl-4">
+                <div className={`text-base font-bold ${b.sickRemainingHours <= 0 ? "text-destructive" : "text-emerald-600"}`}>
+                  {fmtHours(b.sickRemainingHours)}
+                </div>
+                <div className="text-xs text-muted-foreground">Remaining</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

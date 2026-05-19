@@ -14,6 +14,7 @@ export const employeesTable = pgTable("employees", {
   hiredDate: text("hired_date"),
   birthday: text("birthday"),
   imageUrl: text("image_url"),
+  sickTimeAllotmentHours: integer("sick_time_allotment_hours").default(40),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
