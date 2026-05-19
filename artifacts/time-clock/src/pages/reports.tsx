@@ -395,39 +395,11 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
   const expandAll = () => setExpandedIds(new Set(report?.map((e) => e.employeeId) ?? []));
   const collapseAll = () => setExpandedIds(new Set());
 
-  const [reportGenerating, setReportGenerating] = useState(false);
-
-  const generateReport = async () => {
+  const generateReport = () => {
     if (!report || report.length === 0) return;
-    setReportGenerating(true);
 
-    const year = parseInt(startDate.slice(0, 4));
     const rangeLabel = `${startDate} to ${endDate}`;
     const generatedAt = new Date().toLocaleString([], { dateStyle: "long", timeStyle: "short" });
-
-    type BalanceItem = {
-      employeeId: number;
-      allottedHours: number;
-      usedHours: number;
-      plannedHours: number;
-      remainingHours: number;
-      sickTimeAllotmentHours: number;
-      sickUsedHours: number;
-      sickPlannedHours: number;
-      sickRemainingHours: number;
-      breakdown: { type: string; usedHours: number; plannedHours: number }[];
-    };
-
-    let balanceByEmpId = new Map<number, BalanceItem>();
-    try {
-      const res = await fetch(`/api/reports/time-off-balances?year=${year}`);
-      if (res.ok) {
-        const data: BalanceItem[] = await res.json();
-        balanceByEmpId = new Map(data.map((b) => [b.employeeId, b]));
-      }
-    } catch { /* non-fatal */ }
-
-    setReportGenerating(false);
 
     const TO_BG: Record<string, string> = {
       vacation: "#dbeafe", pto: "#e0f2fe", sick: "#fee2e2",
@@ -444,121 +416,85 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
         const bg = TO_BG[e.timeOffType ?? "other"] ?? TO_BG.other;
         const color = TO_TEXT[e.timeOffType ?? "other"] ?? TO_TEXT.other;
         return `<tr style="background:#fffbeb">
-          <td style="padding:6px 12px;color:#6b7280">${e.date ?? "—"}</td>
-          <td colspan="2" style="padding:6px 12px">
+          <td style="padding:7px 12px;color:#6b7280">${e.date ?? "—"}</td>
+          <td colspan="2" style="padding:7px 12px">
             <span style="background:${bg};color:${color};padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500">${label}</span>
           </td>
-          <td style="padding:6px 12px;text-align:right;font-family:monospace;font-weight:600">8h</td>
-          <td style="padding:6px 12px;color:#6b7280;font-size:12px">${e.notes ?? "—"}</td>
+          <td style="padding:7px 12px;text-align:right;font-family:monospace;font-weight:600">8h</td>
+          <td style="padding:7px 12px;color:#6b7280;font-size:12px">${e.notes ?? "—"}</td>
         </tr>`;
       }
       const clockIn = e.clockIn ? new Date(e.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
       const clockOut = e.clockOut ? new Date(e.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Still in";
       const dur = e.totalMinutes != null ? fmtMinutes(e.totalMinutes) : "—";
       return `<tr>
-        <td style="padding:6px 12px;color:#6b7280">${e.date ?? "—"}</td>
-        <td style="padding:6px 12px;font-family:monospace">${clockIn}</td>
-        <td style="padding:6px 12px;font-family:monospace">${clockOut}</td>
-        <td style="padding:6px 12px;text-align:right;font-family:monospace;font-weight:600">${dur}</td>
-        <td style="padding:6px 12px;color:#6b7280;font-size:12px">${e.notes ?? "—"}</td>
+        <td style="padding:7px 12px;color:#6b7280">${e.date ?? "—"}</td>
+        <td style="padding:7px 12px;font-family:monospace">${clockIn}</td>
+        <td style="padding:7px 12px;font-family:monospace">${clockOut}</td>
+        <td style="padding:7px 12px;text-align:right;font-family:monospace;font-weight:600">${dur}</td>
+        <td style="padding:7px 12px;color:#6b7280;font-size:12px">${e.notes ?? "—"}</td>
       </tr>`;
     }).join("");
 
-    const balanceSection = (b: BalanceItem | undefined, periodOffMins: number) => {
-      if (!b) return "";
+    const totalsBlock = (entries: typeof report[0]["entries"], workMins: number) => {
+      // Tally time-off by type from entries
+      const toByType = new Map<string, number>();
+      for (const e of entries) {
+        if (e.kind === "time_off" && e.timeOffType) {
+          toByType.set(e.timeOffType, (toByType.get(e.timeOffType) ?? 0) + (e.totalMinutes ?? 480));
+        }
+      }
+      const totalOffMins = Array.from(toByType.values()).reduce((s, v) => s + v, 0);
+      const grandTotalMins = workMins + totalOffMins;
 
-      const periodOffHrs = periodOffMins > 0 ? fmtMinutes(periodOffMins) : null;
-
-      // PTO balance bar
-      const ptoPct = b.allottedHours > 0 ? Math.min(100, Math.round((b.usedHours / b.allottedHours) * 100)) : 0;
-      const ptoPendPct = b.allottedHours > 0 ? Math.min(100 - ptoPct, Math.round((b.plannedHours / b.allottedHours) * 100)) : 0;
-      const ptoOver = b.usedHours + b.plannedHours > b.allottedHours;
-
-      // Sick balance bar
-      const sickPct = b.sickTimeAllotmentHours > 0 ? Math.min(100, Math.round((b.sickUsedHours / b.sickTimeAllotmentHours) * 100)) : 0;
-      const sickPendPct = b.sickTimeAllotmentHours > 0 ? Math.min(100 - sickPct, Math.round((b.sickPlannedHours / b.sickTimeAllotmentHours) * 100)) : 0;
-
-      // Other time-off types (not PTO or sick) used during the period
-      const otherTypes = b.breakdown.filter((bd) => !["sick", "bereavement"].includes(bd.type) && bd.type !== "pto" && bd.usedHours + bd.plannedHours > 0);
-      const trackOnlyTypes = b.breakdown.filter((bd) => ["bereavement", "personal", "other"].includes(bd.type) && bd.usedHours + bd.plannedHours > 0);
-
-      const pill = (label: string, bg: string, color: string, value: string) =>
-        `<span style="display:inline-flex;align-items:center;gap:4px;background:${bg};color:${color};padding:2px 10px;border-radius:999px;font-size:12px;font-weight:500;margin:2px">${label} <strong>${value}</strong></span>`;
-
-      const balBar = (usedPct: number, pendPct: number) =>
-        `<div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;width:100%;margin:4px 0 6px">
-          <div style="height:100%;display:flex">
-            <div style="background:#3b82f6;width:${usedPct}%"></div>
-            <div style="background:#fbbf24;width:${pendPct}%"></div>
-          </div>
-        </div>`;
+      // Breakdown rows — one per time-off type
+      const typeRows = Array.from(toByType.entries()).map(([type, mins]) => {
+        const label = TIME_OFF_TYPE_LABELS[type] ?? type;
+        const bg = TO_BG[type] ?? TO_BG.other;
+        const color = TO_TEXT[type] ?? TO_TEXT.other;
+        return `<tr>
+          <td style="padding:8px 20px;font-size:13px">
+            <span style="background:${bg};color:${color};padding:2px 9px;border-radius:4px;font-size:12px;font-weight:500">${label}</span>
+          </td>
+          <td style="padding:8px 20px;text-align:right;font-family:monospace;font-size:15px;font-weight:600;color:#374151">${fmtMinutes(mins)}</td>
+        </tr>`;
+      }).join("");
 
       return `
-        <div style="margin-top:28px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
-          <div style="background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#374151;border-bottom:1px solid #e2e8f0">
-            ${year} Leave Balance Summary
-          </div>
-          <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
-
-            <!-- PTO -->
-            <div>
-              <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:2px">PTO / Vacation</div>
-              ${balBar(ptoPct, ptoPendPct)}
-              <div style="display:flex;justify-content:space-between;font-size:12px">
-                <span style="color:#6b7280">Allotted <strong style="color:#111">${fmtHours(b.allottedHours)}</strong></span>
-                <span style="color:#3b82f6">Used <strong>${fmtHours(b.usedHours)}</strong></span>
-                ${b.plannedHours > 0 ? `<span style="color:#d97706">Pending <strong>${fmtHours(b.plannedHours)}</strong></span>` : ""}
-                <span style="${ptoOver ? "color:#dc2626" : "color:#16a34a"}">Remaining <strong>${ptoOver ? "0h" : fmtHours(b.remainingHours)}</strong></span>
-              </div>
-              ${ptoOver ? `<div style="color:#dc2626;font-size:11px;margin-top:3px">Over by ${fmtHours(b.usedHours + b.plannedHours - b.allottedHours)}</div>` : ""}
-            </div>
-
-            <!-- Sick Time -->
-            <div>
-              <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:2px">Sick Time</div>
-              ${balBar(sickPct, sickPendPct)}
-              <div style="display:flex;justify-content:space-between;font-size:12px">
-                <span style="color:#6b7280">Allotted <strong style="color:#111">${fmtHours(b.sickTimeAllotmentHours)}</strong></span>
-                <span style="color:#3b82f6">Used <strong>${fmtHours(b.sickUsedHours)}</strong></span>
-                ${b.sickPlannedHours > 0 ? `<span style="color:#d97706">Pending <strong>${fmtHours(b.sickPlannedHours)}</strong></span>` : ""}
-                <span style="color:#16a34a">Remaining <strong>${fmtHours(b.sickRemainingHours)}</strong></span>
-              </div>
-            </div>
+        <div style="margin-top:28px;border:2px solid #111;border-radius:10px;overflow:hidden">
+          <!-- Totals header -->
+          <div style="background:#111;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+            <span style="color:#fff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em">Period Totals</span>
+            <span style="color:#d1fae5;font-size:11px">${rangeLabel}</span>
           </div>
 
-          ${trackOnlyTypes.length > 0 ? `
-          <div style="padding:0 16px 12px;border-top:1px solid #f1f5f9">
-            <div style="font-size:11px;color:#6b7280;margin:10px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Other Time Off (tracked, no balance)</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px">
-              ${trackOnlyTypes.map((bd) => {
-                const label = TIME_OFF_TYPE_LABELS[bd.type] ?? bd.type;
-                const bg2 = TO_BG[bd.type] ?? TO_BG.other;
-                const col2 = TO_TEXT[bd.type] ?? TO_TEXT.other;
-                const parts = [];
-                if (bd.usedHours > 0) parts.push(`${fmtHours(bd.usedHours)} used`);
-                if (bd.plannedHours > 0) parts.push(`${fmtHours(bd.plannedHours)} pending`);
-                return pill(label, bg2, col2, parts.join(" · "));
-              }).join("")}
-            </div>
-          </div>` : ""}
+          <table style="width:100%;border-collapse:collapse">
+            <!-- Time Worked -->
+            <tr style="background:#f0fdf4;border-bottom:1px solid #bbf7d0">
+              <td style="padding:12px 20px;font-size:14px;font-weight:700;color:#15803d">Time Worked</td>
+              <td style="padding:12px 20px;text-align:right;font-family:monospace;font-size:22px;font-weight:800;color:#15803d">${fmtMinutes(workMins)}</td>
+            </tr>
 
-          ${periodOffHrs ? `
-          <div style="padding:8px 16px 12px;border-top:1px solid #f1f5f9;font-size:12px;color:#6b7280">
-            Time off taken <strong>this period</strong>: <span style="color:#b45309;font-weight:600">${periodOffHrs}</span>
-          </div>` : ""}
-        </div>
+            ${typeRows}
 
-        <div style="margin-top:8px;font-size:10px;color:#9ca3af;display:flex;gap:12px">
-          <span>&#9646; Used (approved)</span>
-          <span style="color:#fbbf24">&#9646; Pending approval</span>
-          <span>Balance data as of ${year} year-to-date</span>
+            ${totalOffMins > 0 ? `
+            <!-- Total time off subtotal -->
+            <tr style="background:#fffbeb;border-top:1px solid #fde68a;border-bottom:2px solid #fde68a">
+              <td style="padding:10px 20px;font-size:13px;font-weight:700;color:#92400e">Total Time Off</td>
+              <td style="padding:10px 20px;text-align:right;font-family:monospace;font-size:18px;font-weight:800;color:#92400e">${fmtMinutes(totalOffMins)}</td>
+            </tr>` : ""}
+
+            <!-- Grand total -->
+            <tr style="background:#1e293b">
+              <td style="padding:14px 20px;font-size:15px;font-weight:800;color:#f8fafc;letter-spacing:0.02em">GRAND TOTAL</td>
+              <td style="padding:14px 20px;text-align:right;font-family:monospace;font-size:26px;font-weight:900;color:#fff">${fmtMinutes(grandTotalMins)}</td>
+            </tr>
+          </table>
         </div>`;
     };
 
     const pages = report.map((emp, idx) => {
       const isLast = idx === report.length - 1;
-      const workHrs = fmtMinutes(emp.totalMinutes);
-      const bal = balanceByEmpId.get(emp.employeeId);
       return `
         <div class="page" style="${isLast ? "" : "page-break-after:always;"}padding:40px 48px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111">
           <!-- Header -->
@@ -572,23 +508,6 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
               <div style="font-size:12px;color:#6b7280">Period</div>
               <div style="font-weight:600;font-size:14px">${rangeLabel}</div>
               <div style="font-size:11px;color:#9ca3af;margin-top:4px">Generated ${generatedAt}</div>
-            </div>
-          </div>
-
-          <!-- Period summary pills -->
-          <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 18px;min-width:110px">
-              <div style="font-size:11px;color:#16a34a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Worked This Period</div>
-              <div style="font-size:20px;font-weight:700;color:#15803d;font-family:monospace">${workHrs}</div>
-            </div>
-            ${emp.totalTimeOffMinutes ? `
-            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 18px;min-width:110px">
-              <div style="font-size:11px;color:#d97706;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Time Off This Period</div>
-              <div style="font-size:20px;font-weight:700;color:#b45309;font-family:monospace">${fmtMinutes(emp.totalTimeOffMinutes)}</div>
-            </div>` : ""}
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 18px;min-width:110px">
-              <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Entries</div>
-              <div style="font-size:20px;font-weight:700;color:#334155;font-family:monospace">${emp.entries.length}</div>
             </div>
           </div>
 
@@ -608,10 +527,10 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
             </tbody>
           </table>
 
-          ${balanceSection(bal, emp.totalTimeOffMinutes ?? 0)}
+          ${totalsBlock(emp.entries, emp.totalMinutes)}
 
           <!-- Footer -->
-          <div style="margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#9ca3af">
+          <div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#9ca3af">
             <span>${emp.employeeName} · ${rangeLabel}</span>
             <span>Page ${idx + 1} of ${report.length}</span>
           </div>
@@ -697,8 +616,8 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
               <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7 gap-1"><ChevronDown className="h-3 w-3" />Expand All</Button>
               <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-7 gap-1"><ChevronUp className="h-3 w-3" />Collapse All</Button>
             </div>
-            <Button size="sm" onClick={generateReport} disabled={reportGenerating} className="gap-2 h-8">
-              <FileText className="h-3.5 w-3.5" />{reportGenerating ? "Preparing…" : "Generate Per-Employee Report"}
+            <Button size="sm" onClick={generateReport} className="gap-2 h-8">
+              <FileText className="h-3.5 w-3.5" />Generate Per-Employee Report
             </Button>
           </div>
 
