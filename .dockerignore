@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+.git
+.local
+.replit
+replit.nix
+attached_assets
+.env
+.env.*
+!.env.docker.example
+**/dist
+**/.turbo
+*.log
