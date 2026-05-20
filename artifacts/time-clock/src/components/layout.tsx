@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, EyeOff, Eye } from "lucide-react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, EyeOff, Eye, Menu } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { useMe } from "@/contexts/me-context";
 import { useTheme, THEMES } from "@/contexts/theme-context";
@@ -23,6 +23,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useQueryClient } from "@tanstack/react-query";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -149,6 +150,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isActualAdmin = me?.role === "admin";
   const { theme, setTheme } = useTheme();
   const [imgError, setImgError] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, alwaysForAdmin: false },
@@ -213,9 +215,59 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           className="flex w-full items-center p-3 px-4 rounded-xl shadow-md justify-between"
           style={{ background: `linear-gradient(to right, hsl(var(--primary)), hsl(var(--nav-gradient-to)))` }}
         >
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button className="md:hidden flex items-center justify-center h-8 w-8 rounded-lg hover:bg-white/10 transition-colors text-white">
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0 flex flex-col">
+                <div
+                  className="flex items-center gap-2 px-5 py-4 font-bold text-lg text-white"
+                  style={{ background: `linear-gradient(to right, hsl(var(--primary)), hsl(var(--nav-gradient-to)))` }}
+                >
+                  <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-6 w-6 brightness-0 invert" />
+                  TimeClock
+                </div>
+                <nav className="flex flex-col gap-1 p-3 flex-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+                {isViewingAsEmployee && (
+                  <div className="p-3 border-t">
+                    <button
+                      onClick={() => { setIsViewingAsEmployee(false); setMobileOpen(false); }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-amber-100 text-amber-900"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Exit Employee Preview
+                    </button>
+                  </div>
+                )}
+              </SheetContent>
+            </Sheet>
+
             <div className="font-bold text-lg flex items-center gap-2 text-white shrink-0">
-              <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-6 w-6 brightness-0 invert" />
+              <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-6 w-6 brightness-0 invert md:block hidden" />
               TimeClock
             </div>
             <nav className="hidden md:flex gap-1 text-sm font-medium">
