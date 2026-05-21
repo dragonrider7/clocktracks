@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, UserPlus, Pencil } from "lucide-react";
+import { Trash2, UserPlus, Pencil, Link, Unlink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Redirect } from "wouter";
@@ -15,10 +15,16 @@ import { EmployeeAvatar } from "@/components/employee-avatar";
 
 const DEFAULT_ALLOTMENT = 80;
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export default function Employees() {
-  const { isAdmin, isLoading: meLoading } = useMe();
+  const { me, isAdmin, isLoading: meLoading } = useMe();
+  const isGhostAdmin = me?.id === -1;
   const { data: employees, isLoading } = useListEmployees();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [linkTarget, setLinkTarget] = useState<{ id: number; name: string; clerkUserId: string | null } | null>(null);
+  const [clerkIdInput, setClerkIdInput] = useState("");
+  const [isLinking, setIsLinking] = useState(false);
   const [editEmp, setEditEmp] = useState<{
     id: number;
     name: string;
@@ -107,6 +113,52 @@ export default function Employees() {
     );
   };
 
+  const handleLinkClerk = async () => {
+    if (!linkTarget || !clerkIdInput.trim()) return;
+    setIsLinking(true);
+    try {
+      const res = await fetch(`${basePath}/api/superadmin/link-clerk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: linkTarget.id, clerkUserId: clerkIdInput.trim() }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        toast({ title: "Link failed", description: err.error ?? "Unknown error", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Account linked", description: `${linkTarget.name} is now linked to Clerk user ${clerkIdInput.trim()}` });
+      setLinkTarget(null);
+      setClerkIdInput("");
+      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleUnlinkClerk = async (emp: { id: number; name: string }) => {
+    if (!confirm(`Unlink Clerk account from ${emp.name}? They will need to sign in again to re-link.`)) return;
+    try {
+      const res = await fetch(`${basePath}/api/superadmin/unlink-clerk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: emp.id }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        toast({ title: "Unlink failed", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Account unlinked" });
+      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -127,6 +179,7 @@ export default function Employees() {
               <div>
                 <label className="text-sm font-medium">Email</label>
                 <Input data-testid="input-email" value={newEmp.email} onChange={(e) => setNewEmp({ ...newEmp, email: e.target.value })} placeholder="jane@company.com" type="email" />
+                <p className="text-xs text-muted-foreground mt-1">Must match the email they use to sign in with Clerk.</p>
               </div>
               <div>
                 <label className="text-sm font-medium">Department</label>
@@ -202,6 +255,7 @@ export default function Employees() {
             ) : (
               employees?.map((emp) => {
                 const allotment = emp.timeOffAllotmentHours ?? DEFAULT_ALLOTMENT;
+                const clerkUserId = (emp as typeof emp & { clerkUserId?: string | null }).clerkUserId ?? null;
                 return (
                   <TableRow key={emp.id} data-testid={`row-employee-${emp.id}`}>
                     <TableCell>
@@ -227,12 +281,33 @@ export default function Employees() {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${(emp as typeof emp & { clerkUserId?: string | null }).clerkUserId ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
-                        {(emp as typeof emp & { clerkUserId?: string | null }).clerkUserId ? "Connected" : "Not signed in"}
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${clerkUserId ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                        {clerkUserId ? "Connected" : "Not signed in"}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {isGhostAdmin && (
+                          clerkUserId ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Unlink Clerk account"
+                              onClick={() => handleUnlinkClerk({ id: emp.id, name: emp.name })}
+                            >
+                              <Unlink className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Link Clerk account manually"
+                              onClick={() => { setLinkTarget({ id: emp.id, name: emp.name, clerkUserId }); setClerkIdInput(""); }}
+                            >
+                              <Link className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          )
+                        )}
                         <Button variant="ghost" size="icon" data-testid={`button-edit-${emp.id}`}
                           onClick={() => setEditEmp({
                             id: emp.id,
@@ -259,6 +334,7 @@ export default function Employees() {
         </Table>
       </CardContent>
 
+      {/* Edit employee dialog */}
       <Dialog open={!!editEmp} onOpenChange={(open) => !open && setEditEmp(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Employee</DialogTitle></DialogHeader>
@@ -271,6 +347,7 @@ export default function Employees() {
               <div>
                 <label className="text-sm font-medium">Email</label>
                 <Input value={editEmp.email} onChange={(e) => setEditEmp({ ...editEmp, email: e.target.value })} type="email" />
+                <p className="text-xs text-muted-foreground mt-1">Must match the email they use to sign in with Clerk.</p>
               </div>
               <div>
                 <label className="text-sm font-medium">Department</label>
@@ -324,6 +401,37 @@ export default function Employees() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Ghost-admin: manually link a Clerk user ID to an employee */}
+      <Dialog open={!!linkTarget} onOpenChange={(open) => !open && setLinkTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Clerk Account — {linkTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Use this when email matching fails. Find the user's ID in the Clerk Dashboard under{" "}
+              <strong>Users → [click user] → User ID</strong> (starts with <code>user_</code>).
+            </p>
+            <div>
+              <label className="text-sm font-medium">Clerk User ID</label>
+              <Input
+                value={clerkIdInput}
+                onChange={(e) => setClerkIdInput(e.target.value)}
+                placeholder="user_2abc..."
+                className="mt-1 font-mono text-sm"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleLinkClerk}
+              disabled={!clerkIdInput.trim() || isLinking}
+            >
+              {isLinking ? "Linking…" : "Link Account"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>

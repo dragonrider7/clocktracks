@@ -24,6 +24,11 @@ import { LicenseProvider, useLicense } from "@/contexts/license-context";
 import LicenseExpired from "@/pages/license-expired";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 
+export type RuntimeConfig = {
+  clerkPublishableKey?: string | null;
+  clerkProxyUrl?: string | null;
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -33,14 +38,9 @@ const queryClient = new QueryClient({
   },
 });
 
-// REQUIRED — copy verbatim
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
-
-// REQUIRED — copy verbatim
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+// Baked-in fallbacks (populated at build time for Replit; Docker uses runtime config)
+const bakedPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
+const bakedProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL as string | undefined;
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -48,10 +48,6 @@ function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
     ? path.slice(basePath.length) || "/"
     : path;
-}
-
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
 
 const clerkAppearance = {
@@ -280,9 +276,30 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   );
 }
 
-function ClerkProviderWithRoutes() {
+function ClerkProviderWithRoutes({ runtimeConfig }: { runtimeConfig: RuntimeConfig }) {
   const [, setLocation] = useLocation();
   const [ghostMode] = useState(isGhostMode);
+
+  // Runtime config (from /api/config) takes precedence over baked-in env vars.
+  // This lets Docker customers supply their own Clerk keys without rebuilding the image.
+  const clerkPubKey = publishableKeyFromHost(
+    window.location.hostname,
+    runtimeConfig.clerkPublishableKey ?? bakedPubKey,
+  );
+  const clerkProxyUrl = runtimeConfig.clerkProxyUrl ?? bakedProxyUrl ?? undefined;
+
+  if (!clerkPubKey) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-center">
+        <div className="space-y-2">
+          <p className="font-semibold text-foreground">Missing Clerk publishable key</p>
+          <p className="text-sm text-muted-foreground">
+            Set <code>CLERK_PUBLISHABLE_KEY</code> in your environment and restart.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ClerkProvider
@@ -340,11 +357,11 @@ function ClerkProviderWithRoutes() {
   );
 }
 
-function App() {
+function App({ runtimeConfig = {} }: { runtimeConfig?: RuntimeConfig }) {
   return (
     <ThemeProvider>
       <WouterRouter base={basePath}>
-        <ClerkProviderWithRoutes />
+        <ClerkProviderWithRoutes runtimeConfig={runtimeConfig} />
       </WouterRouter>
     </ThemeProvider>
   );
