@@ -14,7 +14,7 @@ ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 
 RUN pnpm install --frozen-lockfile
 
-RUN PORT=3000 BASE_PATH=/ pnpm --filter @workspace/time-clock run build
+RUN NODE_ENV=production PORT=3000 BASE_PATH=/ pnpm --filter @workspace/time-clock run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────────────────────
 FROM nginx:alpine
