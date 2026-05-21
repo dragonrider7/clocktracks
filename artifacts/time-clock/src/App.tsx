@@ -18,6 +18,7 @@ import Reports from "@/pages/reports";
 import Profile from "@/pages/profile";
 import Holidays from "@/pages/holidays";
 import Admin from "@/pages/admin";
+import Celebrations from "@/pages/celebrations";
 import GhostLogin from "@/pages/ghost-login";
 import { MeProvider, MeContext } from "@/contexts/me-context";
 import { LicenseProvider, useLicense } from "@/contexts/license-context";
@@ -327,6 +328,7 @@ function ClerkProviderWithRoutes() {
                 <Route path="/time-off" component={() => <ProtectedRoute component={TimeOff} />} />
                 <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
                 <Route path="/holidays" component={() => <ProtectedRoute component={Holidays} />} />
+                <Route path="/celebrations" component={() => <ProtectedRoute component={Celebrations} />} />
                 <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
                 <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
                 <Route component={NotFound} />

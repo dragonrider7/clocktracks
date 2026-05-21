@@ -337,11 +337,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/celebrations")}>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Gift className="h-4 w-4 text-pink-500" />
               <CardTitle>Upcoming Celebrations</CardTitle>
+              <ViewAllLink onClick={() => setLocation("/celebrations")} />
             </div>
             <CardDescription>Birthdays and work anniversaries in the next 30 days</CardDescription>
           </CardHeader>
