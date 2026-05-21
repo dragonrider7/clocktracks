@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star, ArrowRight, ChevronRight } from "lucide-react";
+import { LiveDuration } from "@/components/live-duration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { useLocation } from "wouter";
@@ -161,10 +162,16 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Since {new Date(emp.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                      <div className="text-right">
+                        <LiveDuration
+                          clockIn={emp.clockIn}
+                          showDot
+                          className="text-sm font-semibold text-green-700"
+                        />
+                        <div className="text-[11px] text-muted-foreground leading-none mt-0.5">
+                          since {new Date(emp.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </button>

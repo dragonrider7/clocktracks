@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Clock, LogIn, LogOut } from "lucide-react";
 import { useMe } from "@/contexts/me-context";
 import { EmployeeAvatar } from "@/components/employee-avatar";
+import { LiveDuration } from "@/components/live-duration";
 
 export default function ClockPage() {
   const { me, isAdmin } = useMe();
@@ -148,13 +149,20 @@ export default function ClockPage() {
                       <span className="font-bold text-green-700">Clocked In</span>
                     </div>
                     {activeEntry && (
-                      <div className="text-sm text-green-600 mt-1">
-                        Since{" "}
-                        {new Date(activeEntry.clockIn).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
+                      <>
+                        <div className="text-sm text-green-600 mt-1">
+                          Since{" "}
+                          {new Date(activeEntry.clockIn).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-green-100 px-3 py-1.5">
+                          <Clock className="h-3.5 w-3.5 text-green-700" />
+                          <span className="text-sm font-semibold text-green-800">Today: </span>
+                          <LiveDuration clockIn={activeEntry.clockIn} className="text-sm font-bold text-green-800" />
+                        </div>
+                      </>
                     )}
                   </div>
                 ) : (
@@ -224,12 +232,15 @@ export default function ClockPage() {
                       <div className="text-xs text-muted-foreground">{e.department ?? ""}</div>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Since{" "}
-                    {new Date(e.clockIn).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                  <div className="text-right">
+                    <LiveDuration
+                      clockIn={e.clockIn}
+                      showDot
+                      className="text-xs font-semibold text-green-700"
+                    />
+                    <div className="text-[11px] text-muted-foreground leading-none mt-0.5">
+                      since {new Date(e.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </div>
                   </div>
                 </div>
               ))}
