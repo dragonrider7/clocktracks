@@ -1469,7 +1469,7 @@ components:
       properties:
         tier:
           type: string
-          enum: [valid, expiring, grace, limited, minimal, locked, trial]
+          enum: [valid, expiring, grace, limited, minimal, locked, trial, trial_expired]
         customer:
           type: ["string", "null"]
         email:

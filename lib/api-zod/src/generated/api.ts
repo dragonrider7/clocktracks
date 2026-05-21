@@ -31,7 +31,7 @@ export const GetMeResponse = zod.object({
  * @summary Get current license status
  */
 export const GetLicenseStatusResponse = zod.object({
-  "tier": zod.enum(['valid', 'expiring', 'grace', 'limited', 'minimal', 'locked', 'trial']),
+  "tier": zod.enum(['valid', 'expiring', 'grace', 'limited', 'minimal', 'locked', 'trial', 'trial_expired']),
   "customer": zod.string().nullish(),
   "email": zod.string().nullish(),
   "expiresAt": zod.string().nullish(),
@@ -49,7 +49,7 @@ export const UpdateLicenseKeyBody = zod.object({
 })
 
 export const UpdateLicenseKeyResponse = zod.object({
-  "tier": zod.enum(['valid', 'expiring', 'grace', 'limited', 'minimal', 'locked', 'trial']),
+  "tier": zod.enum(['valid', 'expiring', 'grace', 'limited', 'minimal', 'locked', 'trial', 'trial_expired']),
   "customer": zod.string().nullish(),
   "email": zod.string().nullish(),
   "expiresAt": zod.string().nullish(),

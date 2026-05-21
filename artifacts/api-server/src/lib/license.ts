@@ -5,13 +5,18 @@ MCowBQYDK2VwAyEAL62ResuY59FVB08HJK/NhhsCHS7Gijki/Tu0ABZpe6g=
 -----END PUBLIC KEY-----`;
 
 export type LicenseTier =
-  | "valid"      // >14 days remaining — full access, no banner
-  | "expiring"   // ≤14 days remaining — yellow banner
-  | "grace"      // expired 1–30 days — orange banner, all features
-  | "limited"    // expired 31–90 days — red banner, reports/employees/admin off
-  | "minimal"    // expired 91–180 days — red banner, clock only
-  | "locked"     // expired 180+ days — full lockout
-  | "trial";     // no key configured — banner, full access
+  | "valid"          // >14 days remaining — full access, no banner
+  | "expiring"       // ≤14 days remaining — yellow banner
+  | "grace"          // expired 1–30 days — orange banner, all features
+  | "limited"        // expired 31–90 days — red banner, reports/employees/admin off
+  | "minimal"        // expired 91–180 days — red banner, clock only
+  | "locked"         // expired 180+ days or bad key — full lockout
+  | "trial"          // no key configured, within 30-day trial — banner, limited access
+  | "trial_expired"; // no key configured, trial period elapsed — full lockout
+
+/** Trial limits */
+export const TRIAL_MAX_EMPLOYEES = 5;
+export const TRIAL_DAYS = 30;
 
 export interface LicenseStatus {
   tier: LicenseTier;
@@ -33,11 +38,29 @@ export function employeeTierLabel(maxEmployees: number | null): string {
   return `Up to ${maxEmployees} employees`;
 }
 
-export function checkLicense(rawKey?: string): LicenseStatus {
+export function checkLicense(rawKey?: string, trialStartedAt?: Date | null): LicenseStatus {
   const raw = rawKey;
 
   if (!raw || !raw.trim()) {
-    return { tier: "trial", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: false, maxEmployees: null };
+    const trialExpiresAt = trialStartedAt
+      ? new Date(trialStartedAt.getTime() + TRIAL_DAYS * 86400000)
+      : null;
+
+    const daysRemaining = trialExpiresAt
+      ? Math.floor((trialExpiresAt.getTime() - Date.now()) / 86400000)
+      : null;
+
+    const isExpired = daysRemaining !== null && daysRemaining < 0;
+
+    return {
+      tier: isExpired ? "trial_expired" : "trial",
+      customer: null,
+      email: null,
+      expiresAt: trialExpiresAt?.toISOString() ?? null,
+      daysRemaining,
+      valid: false,
+      maxEmployees: TRIAL_MAX_EMPLOYEES,
+    };
   }
 
   try {

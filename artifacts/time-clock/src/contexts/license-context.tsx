@@ -8,7 +8,8 @@ export type LicenseTier =
   | "limited"
   | "minimal"
   | "locked"
-  | "trial";
+  | "trial"
+  | "trial_expired";
 
 export interface LicenseStatus {
   tier: LicenseTier;

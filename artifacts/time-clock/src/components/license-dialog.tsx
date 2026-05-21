@@ -28,13 +28,14 @@ const TIER_CONFIG: Record<string, {
   icon: React.ElementType;
   description: string;
 }> = {
-  valid:    { label: "Active",         variant: "default",     className: "bg-green-100 text-green-800 border-green-300",   icon: CheckCircle2,   description: "Full access" },
-  expiring: { label: "Expiring Soon",  variant: "outline",     className: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: Clock,          description: "Renew soon" },
-  grace:    { label: "Grace Period",   variant: "outline",     className: "bg-orange-100 text-orange-800 border-orange-300", icon: AlertTriangle,  description: "Full access, renew now" },
-  limited:  { label: "Limited Access", variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: AlertTriangle,  description: "Some features disabled" },
-  minimal:  { label: "Minimal Access", variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: XCircle,        description: "Clock in/out only" },
-  locked:   { label: "Locked",         variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: XCircle,        description: "Access suspended" },
-  trial:    { label: "Trial Mode",     variant: "secondary",   className: "bg-blue-100 text-blue-800 border-blue-300",       icon: Info,           description: "No license key" },
+  valid:         { label: "Active",         variant: "default",     className: "bg-green-100 text-green-800 border-green-300",   icon: CheckCircle2,   description: "Full access" },
+  expiring:      { label: "Expiring Soon",  variant: "outline",     className: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: Clock,          description: "Renew soon" },
+  grace:         { label: "Grace Period",   variant: "outline",     className: "bg-orange-100 text-orange-800 border-orange-300", icon: AlertTriangle,  description: "Full access, renew now" },
+  limited:       { label: "Limited Access", variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: AlertTriangle,  description: "Some features disabled" },
+  minimal:       { label: "Minimal Access", variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: XCircle,        description: "Clock in/out only" },
+  locked:        { label: "Locked",         variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: XCircle,        description: "Access suspended" },
+  trial:         { label: "Trial Mode",     variant: "secondary",   className: "bg-blue-100 text-blue-800 border-blue-300",       icon: Info,           description: "30-day trial · 5 employees" },
+  trial_expired: { label: "Trial Expired",  variant: "destructive", className: "bg-red-100 text-red-800 border-red-300",          icon: XCircle,        description: "Enter a key to continue" },
 };
 
 export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
@@ -59,7 +60,7 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
 
   const config = TIER_CONFIG[license.tier] ?? TIER_CONFIG.trial;
   const StatusIcon = config.icon;
-  const hasKey = license.tier !== "trial";
+  const hasKey = license.tier !== "trial" && license.tier !== "trial_expired";
   const daysLeft = license.daysRemaining;
   const expiredDays = daysLeft !== null && daysLeft < 0 ? Math.abs(daysLeft) : null;
 
@@ -118,9 +119,26 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
             </div>
           )}
 
-          {!hasKey && (
-            <p className="text-sm text-muted-foreground">
-              No license key is active. The app is running in trial mode with full access.
+          {!hasKey && license.tier === "trial" && (
+            <div className="space-y-1.5 text-sm text-muted-foreground">
+              <p>No license key is active.</p>
+              <ul className="space-y-1 text-xs">
+                <li>• <span className="font-medium text-foreground">Employee limit:</span> up to 5 employees</li>
+                {daysLeft !== null && (
+                  <li>• <span className="font-medium text-foreground">Trial ends:</span>{" "}
+                    {daysLeft > 0
+                      ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} remaining`
+                      : "today"
+                    }
+                    {license.expiresAt && ` (${new Date(license.expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })})`}
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          {!hasKey && license.tier === "trial_expired" && (
+            <p className="text-sm text-destructive font-medium">
+              Your 30-day trial has expired. Enter a license key below to restore access.
             </p>
           )}
         </div>

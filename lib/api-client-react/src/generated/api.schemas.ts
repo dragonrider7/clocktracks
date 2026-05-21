@@ -602,6 +602,7 @@ export const LicenseStatusTier = {
   minimal: 'minimal',
   locked: 'locked',
   trial: 'trial',
+  trial_expired: 'trial_expired',
 } as const;
 
 export interface LicenseStatus {

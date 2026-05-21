@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 const router: IRouter = Router();
 
 const LICENSE_KEY_DB = "licenseKey";
+const TRIAL_STARTED_DB = "trialStartedAt";
 
 async function getActiveKey(): Promise<string | undefined> {
   const rows = await db
@@ -18,8 +19,32 @@ async function getActiveKey(): Promise<string | undefined> {
   return rows[0]?.value ?? process.env.LICENSE_KEY ?? undefined;
 }
 
+async function getOrCreateTrialStart(): Promise<Date> {
+  const rows = await db
+    .select()
+    .from(settingsTable)
+    .where(eq(settingsTable.key, TRIAL_STARTED_DB))
+    .limit(1);
+
+  if (rows[0]?.value) {
+    return new Date(rows[0].value);
+  }
+
+  const now = new Date();
+  await db
+    .insert(settingsTable)
+    .values({ key: TRIAL_STARTED_DB, value: now.toISOString() })
+    .onConflictDoNothing();
+  return now;
+}
+
 router.get("/license", async (_req, res): Promise<void> => {
   const key = await getActiveKey();
+  if (!key) {
+    const trialStartedAt = await getOrCreateTrialStart();
+    res.json(checkLicense(undefined, trialStartedAt));
+    return;
+  }
   res.json(checkLicense(key));
 });
 

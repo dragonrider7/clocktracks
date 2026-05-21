@@ -2,7 +2,7 @@ import { AlertTriangle, XCircle, Info } from "lucide-react";
 import { useLicense } from "@/contexts/license-context";
 
 export function LicenseBanner() {
-  const { tier, daysRemaining, expiresAt } = useLicense();
+  const { tier, daysRemaining, expiresAt, maxEmployees } = useLicense();
 
   if (tier === "valid") return null;
 
@@ -11,13 +11,35 @@ export function LicenseBanner() {
   const expiryDate = expiresAt ? new Date(expiresAt).toLocaleDateString() : null;
 
   if (tier === "trial") {
+    const isNearExpiry = daysRemaining !== null && daysRemaining <= 7;
+    const BannerIcon = isNearExpiry ? AlertTriangle : Info;
+    const colors = isNearExpiry
+      ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+      : "bg-blue-50 border-blue-200 text-blue-800";
+
     return (
-      <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-2 text-sm text-blue-800">
-        <Info className="h-4 w-4 shrink-0" />
+      <div className={`${colors} border-b px-4 py-2 flex items-center gap-2 text-sm`}>
+        <BannerIcon className="h-4 w-4 shrink-0" />
         <span>
-          <strong>Trial mode</strong> — No license key configured. Add a{" "}
-          <code className="bg-blue-100 px-1 rounded text-xs">LICENSE_KEY</code> to your{" "}
-          <code className="bg-blue-100 px-1 rounded text-xs">.env.docker</code> to activate.
+          <strong>Trial mode</strong>
+          {daysRemaining !== null
+            ? <> — <strong>{daysRemaining} {daysRemaining === 1 ? "day" : "days"}</strong> remaining{expiryDate && ` (expires ${expiryDate})`}</>
+            : null
+          }
+          {maxEmployees !== null && <> · Limited to <strong>{maxEmployees} employees</strong></>}.{" "}
+          Enter a <code className="bg-black/5 px-1 rounded text-xs">LICENSE_KEY</code> to unlock full access.
+        </span>
+      </div>
+    );
+  }
+
+  if (tier === "trial_expired") {
+    return (
+      <div className="bg-red-50 border-b border-red-200 px-4 py-2 flex items-center gap-2 text-sm text-red-800">
+        <XCircle className="h-4 w-4 shrink-0" />
+        <span>
+          <strong>Trial expired.</strong>{" "}
+          Your 30-day trial has ended. Enter a license key to continue using TimeClock.
         </span>
       </div>
     );
