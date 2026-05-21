@@ -57,6 +57,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LicenseStatus"
+    put:
+      operationId: updateLicenseKey
+      tags: [license]
+      summary: Update license key (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLicenseKeyRequest"
+      responses:
+        "200":
+          description: Updated license status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseStatus"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
 
   /healthz:
     get:
@@ -1459,3 +1480,10 @@ components:
           type: ["integer", "null"]
         valid:
           type: boolean
+
+    UpdateLicenseKeyRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: ["string", "null"]

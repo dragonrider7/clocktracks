@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, EyeOff, Eye, Menu } from "lucide-react";
+import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, EyeOff, Eye, Menu, KeyRound } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { useMe } from "@/contexts/me-context";
 import { useLicense } from "@/contexts/license-context";
 import { LicenseBanner } from "@/components/license-banner";
+import { LicenseDialog } from "@/components/license-dialog";
 import { useTheme, THEMES } from "@/contexts/theme-context";
 import {
   useGetUnreadNotificationCount,
@@ -154,6 +155,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { tier } = useLicense();
   const [imgError, setImgError] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
 
   const licenseHiddenRoutes =
     tier === "minimal" || tier === "locked"
@@ -378,6 +380,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                {isActualAdmin && (
+                  <DropdownMenuItem
+                    onClick={() => setLicenseDialogOpen(true)}
+                    className="cursor-pointer gap-2"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    License
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="button-sign-out"
@@ -395,6 +406,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 lg:p-8">
         {children}
       </main>
+
+      <LicenseDialog open={licenseDialogOpen} onOpenChange={setLicenseDialogOpen} />
     </div>
   );
 }

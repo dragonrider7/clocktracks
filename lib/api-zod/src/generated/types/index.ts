@@ -70,3 +70,4 @@ export * from './timesheetEntryKind';
 export * from './unreadNotificationCount';
 export * from './upcomingEvent';
 export * from './upcomingEventKind';
+export * from './updateLicenseKeyRequest';

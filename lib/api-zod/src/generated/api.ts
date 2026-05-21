@@ -41,6 +41,23 @@ export const GetLicenseStatusResponse = zod.object({
 
 
 /**
+ * @summary Update license key (admin only)
+ */
+export const UpdateLicenseKeyBody = zod.object({
+  "key": zod.string().nullable()
+})
+
+export const UpdateLicenseKeyResponse = zod.object({
+  "tier": zod.enum(['valid', 'expiring', 'grace', 'limited', 'minimal', 'locked', 'trial']),
+  "customer": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "expiresAt": zod.string().nullish(),
+  "daysRemaining": zod.number().nullish(),
+  "valid": zod.boolean()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

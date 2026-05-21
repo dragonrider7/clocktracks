@@ -4,3 +4,4 @@ export * from "./timeOffRequests";
 export * from "./holidays";
 export * from "./timeAdjustmentRequests";
 export * from "./notifications";
+export * from "./settings";

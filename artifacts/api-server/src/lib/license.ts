@@ -22,8 +22,8 @@ export interface LicenseStatus {
   valid: boolean;
 }
 
-export function checkLicense(): LicenseStatus {
-  const raw = process.env.LICENSE_KEY;
+export function checkLicense(rawKey?: string): LicenseStatus {
+  const raw = rawKey;
 
   if (!raw || !raw.trim()) {
     return { tier: "trial", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: false };

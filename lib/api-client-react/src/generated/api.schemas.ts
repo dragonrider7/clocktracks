@@ -617,6 +617,11 @@ export interface LicenseStatus {
   valid: boolean;
 }
 
+export interface UpdateLicenseKeyRequest {
+  /** @nullable */
+  key: string | null;
+}
+
 export type ListTimeEntriesParams = {
 employeeId?: number;
 startDate?: string;

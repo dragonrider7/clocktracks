@@ -56,7 +56,8 @@ import type {
   TimeOffRequestInput,
   TimeOffReview,
   UnreadNotificationCount,
-  UpcomingEvent
+  UpcomingEvent,
+  UpdateLicenseKeyRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -224,6 +225,77 @@ export function useGetLicenseStatus<TData = Awaited<ReturnType<typeof getLicense
 
 
 
+
+export const getUpdateLicenseKeyUrl = () => {
+
+
+
+
+  return `/api/license`
+}
+
+/**
+ * @summary Update license key (admin only)
+ */
+export const updateLicenseKey = async (updateLicenseKeyRequest: UpdateLicenseKeyRequest, options?: RequestInit): Promise<LicenseStatus> => {
+
+  return customFetch<LicenseStatus>(getUpdateLicenseKeyUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateLicenseKeyRequest,)
+  }
+);}
+
+
+
+
+export const getUpdateLicenseKeyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLicenseKey>>, TError,{data: BodyType<UpdateLicenseKeyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLicenseKey>>, TError,{data: BodyType<UpdateLicenseKeyRequest>}, TContext> => {
+
+const mutationKey = ['updateLicenseKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLicenseKey>>, {data: BodyType<UpdateLicenseKeyRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateLicenseKey(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLicenseKeyMutationResult = NonNullable<Awaited<ReturnType<typeof updateLicenseKey>>>
+    export type UpdateLicenseKeyMutationBody = BodyType<UpdateLicenseKeyRequest>
+    export type UpdateLicenseKeyMutationError = ErrorType<void>
+
+    /**
+ * @summary Update license key (admin only)
+ */
+export const useUpdateLicenseKey = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLicenseKey>>, TError,{data: BodyType<UpdateLicenseKeyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLicenseKey>>,
+        TError,
+        {data: BodyType<UpdateLicenseKeyRequest>},
+        TContext
+      > => {
+      return useMutation(getUpdateLicenseKeyMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 
