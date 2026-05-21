@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { clerkClient } from "@clerk/express";
 import { db, employeesTable } from "@workspace/db";
@@ -15,13 +15,13 @@ router.get("/me", async (req, res): Promise<void> => {
     return;
   }
 
-  // 1. Try to find employee already linked by Clerk user ID
+  // 1. Already linked — fast path
   let [employee] = await db
     .select()
     .from(employeesTable)
     .where(eq(employeesTable.clerkUserId, clerkUserId));
 
-  // Sync imageUrl for already-linked users if it's not yet cached
+  // Sync imageUrl if it is not yet cached
   if (employee && !employee.imageUrl) {
     try {
       const clerkUser = await clerkClient.users.getUser(clerkUserId);
@@ -37,59 +37,87 @@ router.get("/me", async (req, res): Promise<void> => {
     }
   }
 
-  if (!employee) {
-    let clerkUser;
-    try {
-      clerkUser = await clerkClient.users.getUser(clerkUserId);
-    } catch (err) {
-      req.log.error({ err }, "Failed to fetch Clerk user");
-      res.status(500).json({ error: "Failed to look up user" });
-      return;
+  if (employee) {
+    res.json({ ...employee, createdAt: employee.createdAt.toISOString() });
+    return;
+  }
+
+  // 2. New sign-in — fetch Clerk user details
+  let clerkUser;
+  try {
+    clerkUser = await clerkClient.users.getUser(clerkUserId);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch Clerk user");
+    res.status(500).json({ error: "Failed to look up user" });
+    return;
+  }
+
+  const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+  // 3. Has anyone ever signed in? (any employee with a linked Clerk user ID)
+  //    This is more reliable than counting rows because pre-seeded employee
+  //    records (with no clerkUserId) should not block the bootstrap admin.
+  const [{ count: linkedCount }] = await db
+    .select({ count: db.$count(employeesTable) })
+    .from(employeesTable)
+    .where(isNotNull(employeesTable.clerkUserId));
+
+  const isFirstEverLogin = Number(linkedCount) === 0;
+
+  if (isFirstEverLogin) {
+    // ── Bootstrap admin ────────────────────────────────────────────────────
+    // First person to ever sign in becomes admin regardless of any pre-seeded
+    // employee records. If their email matches an existing record we promote
+    // it to admin; otherwise we create a fresh one.
+
+    let existingByEmail = null;
+    if (email) {
+      [existingByEmail] = await db
+        .select()
+        .from(employeesTable)
+        .where(eq(employeesTable.email, email));
     }
 
-    const email = clerkUser.emailAddresses?.[0]?.emailAddress;
-
-    // 2. Try to match by email to an existing employee record
-    if (email) {
+    if (existingByEmail) {
       [employee] = await db
+        .update(employeesTable)
+        .set({ clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
+        .where(eq(employeesTable.id, existingByEmail.id))
+        .returning();
+    } else {
+      const name =
+        clerkUser.firstName && clerkUser.lastName
+          ? `${clerkUser.firstName} ${clerkUser.lastName}`
+          : clerkUser.firstName || clerkUser.username || email || "Admin";
+
+      [employee] = await db
+        .insert(employeesTable)
+        .values({ name, email: email ?? null, clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
+        .returning();
+    }
+  } else {
+    // ── Normal flow ────────────────────────────────────────────────────────
+    // System already has signed-in users. Only allow sign-in if the Clerk
+    // email matches a pre-existing employee record (created by an admin).
+
+    if (email) {
+      const [byEmail] = await db
         .select()
         .from(employeesTable)
         .where(eq(employeesTable.email, email));
 
-      if (employee) {
-        // Link the Clerk user ID and sync imageUrl so future lookups skip this step
+      if (byEmail) {
         [employee] = await db
           .update(employeesTable)
           .set({ clerkUserId, imageUrl: clerkUser.imageUrl ?? null })
-          .where(eq(employeesTable.id, employee.id))
+          .where(eq(employeesTable.id, byEmail.id))
           .returning();
       }
     }
 
-    // 3. No match found — check if this is the very first user ever (bootstrap admin)
     if (!employee) {
-      const [{ count }] = await db
-        .select({ count: db.$count(employeesTable) })
-        .from(employeesTable);
-
-      const isFirstUser = Number(count) === 0;
-
-      if (isFirstUser) {
-        // First account ever → create as admin so the system can be managed
-        const name =
-          clerkUser.firstName && clerkUser.lastName
-            ? `${clerkUser.firstName} ${clerkUser.lastName}`
-            : clerkUser.firstName || clerkUser.username || email || "Admin";
-
-        [employee] = await db
-          .insert(employeesTable)
-          .values({ name, email: email ?? null, clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
-          .returning();
-      } else {
-        // Not the first user and no matching employee record → deny access
-        res.status(403).json({ error: "not_authorized" });
-        return;
-      }
+      res.status(403).json({ error: "not_authorized" });
+      return;
     }
   }
 
