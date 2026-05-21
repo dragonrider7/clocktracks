@@ -1,10 +1,20 @@
 import { Router, type IRouter } from "express";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq, isNotNull, sql } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { clerkClient } from "@clerk/express";
 import { db, employeesTable } from "@workspace/db";
 
 const router: IRouter = Router();
+
+/** Case-insensitive, whitespace-trimmed email lookup. */
+async function findEmployeeByEmail(email: string) {
+  const normalised = email.trim().toLowerCase();
+  const [row] = await db
+    .select()
+    .from(employeesTable)
+    .where(sql`LOWER(TRIM(${employeesTable.email})) = ${normalised}`);
+  return row ?? null;
+}
 
 router.get("/me", async (req, res): Promise<void> => {
   // Ghost super-admin session — bypass Clerk entirely
@@ -74,11 +84,12 @@ router.get("/me", async (req, res): Promise<void> => {
     return;
   }
 
-  const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+  // Use the primary email from Clerk, trimmed
+  const email = clerkUser.emailAddresses?.[0]?.emailAddress?.trim() ?? null;
 
   // 3. Has anyone ever signed in? (any employee with a linked Clerk user ID)
-  //    This is more reliable than counting rows because pre-seeded employee
-  //    records (with no clerkUserId) should not block the bootstrap admin.
+  //    Using linked count rather than total count so pre-seeded employee
+  //    records don't block the bootstrap admin on a fresh install.
   const [{ count: linkedCount }] = await db
     .select({ count: db.$count(employeesTable) })
     .from(employeesTable)
@@ -89,21 +100,15 @@ router.get("/me", async (req, res): Promise<void> => {
   if (isFirstEverLogin) {
     // ── Bootstrap admin ────────────────────────────────────────────────────
     // First person to ever sign in becomes admin regardless of any pre-seeded
-    // employee records. If their email matches an existing record we promote
-    // it to admin; otherwise we create a fresh one.
+    // employee records. Email match is case-insensitive so it works even if
+    // the admin typed the email with different capitalisation.
 
-    let existingByEmail = null;
-    if (email) {
-      [existingByEmail] = await db
-        .select()
-        .from(employeesTable)
-        .where(eq(employeesTable.email, email));
-    }
+    const existingByEmail = email ? await findEmployeeByEmail(email) : null;
 
     if (existingByEmail) {
       [employee] = await db
         .update(employeesTable)
-        .set({ clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
+        .set({ clerkUserId, role: "admin", email, imageUrl: clerkUser.imageUrl ?? null })
         .where(eq(employeesTable.id, existingByEmail.id))
         .returning();
     } else {
@@ -114,30 +119,31 @@ router.get("/me", async (req, res): Promise<void> => {
 
       [employee] = await db
         .insert(employeesTable)
-        .values({ name, email: email ?? null, clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
+        .values({ name, email, clerkUserId, role: "admin", imageUrl: clerkUser.imageUrl ?? null })
         .returning();
     }
   } else {
     // ── Normal flow ────────────────────────────────────────────────────────
-    // System already has signed-in users. Only allow sign-in if the Clerk
-    // email matches a pre-existing employee record (created by an admin).
+    // Only allow sign-in if the Clerk email matches a pre-existing employee
+    // record. Match is case-insensitive and whitespace-tolerant so typos in
+    // the admin panel don't silently block employees from logging in.
 
     if (email) {
-      const [byEmail] = await db
-        .select()
-        .from(employeesTable)
-        .where(eq(employeesTable.email, email));
+      const byEmail = await findEmployeeByEmail(email);
 
       if (byEmail) {
+        // Also normalise the stored email to Clerk's canonical form so the
+        // LOWER() lookup is never needed again for this employee.
         [employee] = await db
           .update(employeesTable)
-          .set({ clerkUserId, imageUrl: clerkUser.imageUrl ?? null })
+          .set({ clerkUserId, email, imageUrl: clerkUser.imageUrl ?? null })
           .where(eq(employeesTable.id, byEmail.id))
           .returning();
       }
     }
 
     if (!employee) {
+      req.log.warn({ clerkUserId, email }, "Sign-in blocked: no matching employee record");
       res.status(403).json({ error: "not_authorized" });
       return;
     }
