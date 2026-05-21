@@ -4,6 +4,7 @@ import {
   useGetPendingRequests,
   useGetOutThisWeek,
   useGetUpcomingEvents,
+  useListTimeEntries,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,22 +117,31 @@ function ClockedInRow({ emp, onClick }: { emp: ClockedInEmployee; onClick: () =>
   );
 }
 
-function MyHoursTodayCard({
-  clockIn,
-  isLoading,
-  onClick,
-}: {
-  clockIn: string | null;
-  isLoading: boolean;
-  onClick: () => void;
-}) {
-  const elapsed = useRunningClock(clockIn);
+/**
+ * Fetches the current user's work entries for today and shows a live
+ * running total: completed sessions + the active running session.
+ */
+function PersonalTodayHours({ employeeId, onClick }: { employeeId: number; onClick: () => void }) {
+  const today = new Date().toISOString().split("T")[0];
+  const { data: todayEntries, isLoading } = useListTimeEntries(
+    { employeeId, startDate: today, endDate: today },
+  );
+
+  const completedMins = todayEntries
+    ?.filter((e) => e.kind === "work" && e.clockOut)
+    .reduce((sum, e) => sum + (e.totalMinutes ?? 0), 0) ?? 0;
+
+  const activeEntry = todayEntries?.find((e) => e.kind === "work" && !e.clockOut) ?? null;
+  const elapsed = useRunningClock(activeEntry?.clockIn ?? null, completedMins);
+
+  const hasWork = completedMins > 0 || !!activeEntry;
+
   return (
     <StatCard
-      title="My Hours Today"
-      value={clockIn ? elapsed : "—"}
-      subtitle={clockIn ? "Live · current session" : "Not clocked in"}
-      icon={<Timer className="h-4 w-4" />}
+      title="Today's Hours"
+      value={hasWork ? elapsed : "—"}
+      subtitle={activeEntry ? "Live · updating each minute" : "Total work time today"}
+      icon={<Clock className="h-4 w-4" />}
       accentClass="bg-emerald-500"
       isLoading={isLoading}
       onClick={onClick}
@@ -152,8 +162,6 @@ export default function Dashboard() {
     ? weeklyHours
     : weeklyHours?.filter((emp) => emp.employeeId === me?.id);
 
-  const myActiveEntry = status?.clockedInEmployees?.find((e) => e.employeeId === me?.id);
-
   return (
     <div className="grid gap-4 md:gap-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -166,19 +174,18 @@ export default function Dashboard() {
           isLoading={statusLoading}
           onClick={() => setLocation("/time-entries")}
         />
-        {isAdmin ? (
-          <StatCard
-            title="Today's Hours"
-            value={`${status?.todayTotalHours?.toFixed(1) ?? "0.0"} hrs`}
-            subtitle="Total hours tracked today"
-            icon={<Clock className="h-4 w-4" />}
-            accentClass="bg-emerald-500"
-            isLoading={statusLoading}
+        {me?.id ? (
+          <PersonalTodayHours
+            employeeId={me.id}
             onClick={() => setLocation("/time-entries")}
           />
         ) : (
-          <MyHoursTodayCard
-            clockIn={myActiveEntry?.clockIn ?? null}
+          <StatCard
+            title="Today's Hours"
+            value="—"
+            subtitle="Total work time today"
+            icon={<Clock className="h-4 w-4" />}
+            accentClass="bg-emerald-500"
             isLoading={statusLoading}
             onClick={() => setLocation("/time-entries")}
           />
