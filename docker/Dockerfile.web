@@ -12,7 +12,7 @@ COPY artifacts/time-clock/ ./artifacts/time-clock/
 ARG VITE_CLERK_PUBLISHABLE_KEY
 ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 RUN NODE_ENV=production PORT=3000 BASE_PATH=/ pnpm --filter @workspace/time-clock run build
 
