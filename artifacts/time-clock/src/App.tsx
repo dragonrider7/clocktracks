@@ -214,9 +214,8 @@ function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-8 px-4">
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex items-center gap-3">
-          <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-12 w-12" />
-          <span className="text-3xl font-bold text-primary">TimeClock</span>
+        <div className="flex items-center">
+          <img src={`${basePath}/clocktracks-logo-light.png`} alt="ClockTracks" className="h-16 w-auto" />
         </div>
         <p className="text-muted-foreground max-w-md text-lg">
           Simple, reliable time tracking for your team. Clock in and out, track hours, and manage time off — all in one place.
@@ -296,13 +295,13 @@ function ClerkProviderWithRoutes() {
         signIn: {
           start: {
             title: "Welcome back",
-            subtitle: "Sign in to your TimeClock account",
+            subtitle: "Sign in to your ClockTracks account",
           },
         },
         signUp: {
           start: {
             title: "Create your account",
-            subtitle: "Join your team on TimeClock",
+            subtitle: "Join your team on ClockTracks",
           },
         },
       }}

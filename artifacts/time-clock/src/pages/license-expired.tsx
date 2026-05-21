@@ -10,9 +10,8 @@ export default function LicenseExpired() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-6 px-4 text-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-3">
-          <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-10 w-10 opacity-40" />
-          <span className="text-2xl font-bold text-muted-foreground">TimeClock</span>
+        <div className="flex items-center">
+          <img src={`${basePath}/clocktracks-logo-light.png`} alt="ClockTracks" className="h-12 w-auto opacity-60" />
         </div>
         <XCircle className="h-16 w-16 text-destructive" />
         <h1 className="text-2xl font-bold text-foreground">License Expired</h1>

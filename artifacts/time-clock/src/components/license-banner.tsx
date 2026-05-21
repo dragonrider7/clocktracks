@@ -39,7 +39,7 @@ export function LicenseBanner() {
         <XCircle className="h-4 w-4 shrink-0" />
         <span>
           <strong>Trial expired.</strong>{" "}
-          Your 30-day trial has ended. Enter a license key to continue using TimeClock.
+          Your 30-day trial has ended. Enter a license key to continue using ClockTracks.
         </span>
       </div>
     );

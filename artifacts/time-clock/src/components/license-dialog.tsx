@@ -64,9 +64,9 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
   const daysLeft = license.daysRemaining;
   const expiredDays = daysLeft !== null && daysLeft < 0 ? Math.abs(daysLeft) : null;
 
-  const renewalSubject = encodeURIComponent("TimeClock License Renewal");
+  const renewalSubject = encodeURIComponent("ClockTracks License Renewal");
   const renewalBody = encodeURIComponent(
-    `Hello,\n\nI would like to renew my TimeClock annual license.\n\nCustomer: ${license.customer ?? "—"}\nEmail: ${license.email ?? "—"}\n\nPlease send me a new license key.\n\nThank you`
+    `Hello,\n\nI would like to renew my ClockTracks annual license.\n\nCustomer: ${license.customer ?? "—"}\nEmail: ${license.email ?? "—"}\n\nPlease send me a new license key.\n\nThank you`
   );
   const renewalHref = `mailto:support@clocktracks.com?subject=${renewalSubject}&body=${renewalBody}`;
 
@@ -76,7 +76,7 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
         <DialogHeader>
           <DialogTitle>License</DialogTitle>
           <DialogDescription>
-            Manage your TimeClock annual subscription license.
+            Manage your ClockTracks annual subscription license.
           </DialogDescription>
         </DialogHeader>
 

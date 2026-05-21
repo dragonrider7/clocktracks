@@ -42,7 +42,7 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
   if (isNotAuthorized) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-6 px-4 text-center">
-        <img src={`${basePath}/logo.svg`} alt="TimeClock" className="h-12 w-12 opacity-60" />
+        <img src={`${basePath}/clocktracks-logo-light.png`} alt="ClockTracks" className="h-12 w-auto opacity-70" />
         <div className="space-y-2">
           <h1 className="text-xl font-semibold text-foreground">Access not set up yet</h1>
           <p className="text-muted-foreground max-w-sm">

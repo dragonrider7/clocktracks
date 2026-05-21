@@ -500,7 +500,7 @@ function TimesheetsTab({ employees }: { employees: { id: number; name: string }[
           <!-- Header -->
           <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:24px">
             <div>
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:4px">TimeClock · Employee Timesheet Report</div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:4px">ClockTracks · Employee Timesheet Report</div>
               <div style="font-size:22px;font-weight:700">${emp.employeeName}</div>
               ${emp.department ? `<div style="font-size:13px;color:#6b7280;margin-top:2px">${emp.department}</div>` : ""}
             </div>
