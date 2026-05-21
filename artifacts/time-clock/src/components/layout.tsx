@@ -332,7 +332,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-white/10 transition-colors text-white"
                 >
                   <Avatar size="sm" />
-                  <span className="hidden sm:block">{me?.name ?? "Loading..."}</span>
+                  {me?.name && (
+                    <span className="hidden sm:block">{me.name}</span>
+                  )}
                   {isAdmin && (
                     <span className="hidden sm:block text-xs bg-white/20 text-white px-1.5 py-0.5 rounded">
                       Admin
