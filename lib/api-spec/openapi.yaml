@@ -1480,6 +1480,9 @@ components:
           type: ["integer", "null"]
         valid:
           type: boolean
+        maxEmployees:
+          type: ["integer", "null"]
+          description: "Maximum number of employees allowed by the license. Null means unlimited."
 
     UpdateLicenseKeyRequest:
       type: object

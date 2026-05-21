@@ -17,6 +17,8 @@ export interface LicenseStatus {
   expiresAt: string | null;
   daysRemaining: number | null;
   valid: boolean;
+  /** Maximum employees allowed by the license. Null = unlimited. */
+  maxEmployees: number | null;
 }
 
 const LicenseContext = createContext<LicenseStatus>({
@@ -26,6 +28,7 @@ const LicenseContext = createContext<LicenseStatus>({
   expiresAt: null,
   daysRemaining: null,
   valid: true,
+  maxEmployees: null,
 });
 
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
@@ -45,8 +48,9 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         expiresAt: data.expiresAt ?? null,
         daysRemaining: data.daysRemaining ?? null,
         valid: data.valid,
+        maxEmployees: data.maxEmployees ?? null,
       }
-    : { tier: "valid", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: true };
+    : { tier: "valid", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: true, maxEmployees: null };
 
   return <LicenseContext.Provider value={status}>{children}</LicenseContext.Provider>;
 }

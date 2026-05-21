@@ -36,7 +36,8 @@ export const GetLicenseStatusResponse = zod.object({
   "email": zod.string().nullish(),
   "expiresAt": zod.string().nullish(),
   "daysRemaining": zod.number().nullish(),
-  "valid": zod.boolean()
+  "valid": zod.boolean(),
+  "maxEmployees": zod.number().nullish().describe('Maximum number of employees allowed by the license. Null means unlimited.')
 })
 
 
@@ -53,7 +54,8 @@ export const UpdateLicenseKeyResponse = zod.object({
   "email": zod.string().nullish(),
   "expiresAt": zod.string().nullish(),
   "daysRemaining": zod.number().nullish(),
-  "valid": zod.boolean()
+  "valid": zod.boolean(),
+  "maxEmployees": zod.number().nullish().describe('Maximum number of employees allowed by the license. Null means unlimited.')
 })
 
 

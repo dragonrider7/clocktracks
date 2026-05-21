@@ -18,4 +18,9 @@ export interface LicenseStatus {
   /** @nullable */
   daysRemaining?: number | null;
   valid: boolean;
+  /**
+     * Maximum number of employees allowed by the license. Null means unlimited.
+     * @nullable
+     */
+  maxEmployees?: number | null;
 }

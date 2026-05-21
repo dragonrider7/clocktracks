@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, employeesTable } from "@workspace/db";
+import { db, employeesTable, settingsTable } from "@workspace/db";
 import {
   CreateEmployeeBody,
   UpdateEmployeeParams,
@@ -8,6 +8,7 @@ import {
   GetEmployeeParams,
   DeleteEmployeeParams,
 } from "@workspace/api-zod";
+import { checkLicense } from "../lib/license";
 
 const router: IRouter = Router();
 
@@ -22,6 +23,31 @@ router.post("/employees", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // ── License seat check ────────────────────────────────────────────────────
+  const licenseRows = await db
+    .select()
+    .from(settingsTable)
+    .where(eq(settingsTable.key, "licenseKey"))
+    .limit(1);
+  const licenseKey = licenseRows[0]?.value ?? process.env.LICENSE_KEY;
+  const license = checkLicense(licenseKey);
+
+  if (license.maxEmployees !== null) {
+    const [{ count }] = await db
+      .select({ count: db.$count(employeesTable) })
+      .from(employeesTable);
+    if (Number(count) >= license.maxEmployees) {
+      res.status(422).json({
+        error: "employee_limit_reached",
+        maxEmployees: license.maxEmployees,
+        message: `Your license allows up to ${license.maxEmployees} employees. Please upgrade to add more.`,
+      });
+      return;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const [employee] = await db.insert(employeesTable).values(parsed.data).returning();
   res.status(201).json({ ...employee, createdAt: employee.createdAt.toISOString() });
 });

@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, UserPlus, Pencil } from "lucide-react";
+import { Trash2, UserPlus, Pencil, AlertTriangle, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Redirect } from "wouter";
 import { useMe } from "@/contexts/me-context";
+import { useLicense } from "@/contexts/license-context";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 
 const DEFAULT_ALLOTMENT = 80;
@@ -18,6 +19,7 @@ const DEFAULT_ALLOTMENT = 80;
 export default function Employees() {
   const { isAdmin, isLoading: meLoading } = useMe();
   const { data: employees, isLoading } = useListEmployees();
+  const { maxEmployees } = useLicense();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editEmp, setEditEmp] = useState<{
     id: number;
@@ -47,6 +49,10 @@ export default function Employees() {
 
   if (!meLoading && !isAdmin) return <Redirect to="/dashboard" />;
 
+  const employeeCount = employees?.length ?? 0;
+  const atLimit = maxEmployees !== null && employeeCount >= maxEmployees;
+  const nearLimit = maxEmployees !== null && !atLimit && employeeCount >= maxEmployees - 2;
+
   const handleAdd = () => {
     if (!newEmp.name) return;
     createMutation.mutate(
@@ -67,6 +73,20 @@ export default function Employees() {
           setIsAddOpen(false);
           setNewEmp({ name: "", department: "", role: "employee", email: "", timeOffAllotmentHours: DEFAULT_ALLOTMENT, hiredDate: "", birthday: "" });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+        },
+        onError: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          const max = (err as { payload?: { maxEmployees?: number } })?.payload?.maxEmployees ?? maxEmployees;
+          if (status === 422) {
+            toast({
+              title: "Employee limit reached",
+              description: `Your license allows up to ${max} employees. Upgrade your plan to add more.`,
+              variant: "destructive",
+            });
+            setIsAddOpen(false);
+          } else {
+            toast({ title: "Failed to add employee", variant: "destructive" });
+          }
         },
       }
     );
@@ -110,10 +130,38 @@ export default function Employees() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Team Members</CardTitle>
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <div className="space-y-1">
+          <CardTitle>Team Members</CardTitle>
+          {maxEmployees !== null && (
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
+              <span>
+                <span className={atLimit ? "text-destructive font-semibold" : nearLimit ? "text-amber-600 font-semibold" : "font-medium"}>
+                  {employeeCount}
+                </span>
+                <span> / {maxEmployees} employees used</span>
+              </span>
+              {atLimit && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive text-xs px-2 py-0.5 font-medium">
+                  <AlertTriangle className="h-3 w-3" /> Limit reached
+                </span>
+              )}
+              {nearLimit && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 text-xs px-2 py-0.5 font-medium">
+                  <AlertTriangle className="h-3 w-3" /> Limit approaching
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <Dialog open={isAddOpen} onOpenChange={(open) => { if (!atLimit || !open) setIsAddOpen(open); }}>
           <DialogTrigger asChild>
-            <Button size="sm" data-testid="button-add-employee">
+            <Button
+              size="sm"
+              data-testid="button-add-employee"
+              disabled={atLimit}
+              title={atLimit ? `Your license allows up to ${maxEmployees} employees. Upgrade to add more.` : undefined}
+            >
               <UserPlus className="w-4 h-4 mr-2" />Add Employee
             </Button>
           </DialogTrigger>

@@ -1,23 +1,38 @@
 import { useLocation, Redirect } from "wouter";
 import { useMe } from "@/contexts/me-context";
+import { useLicense } from "@/contexts/license-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   useListTimeAdjustments,
   useGetPendingRequests,
   useGetUnreadNotificationCount,
+  useListEmployees,
   getListTimeAdjustmentsQueryKey,
   getGetUnreadNotificationCountQueryKey,
 } from "@workspace/api-client-react";
 import {
   Users, Calendar, FileBarChart, Gift, Settings,
-  ClipboardList, Eye, EyeOff, Bell, Clock, CheckCircle,
+  ClipboardList, Eye, EyeOff, Bell, Clock, CheckCircle, ShieldCheck,
 } from "lucide-react";
+
+function tierLabel(maxEmployees: number | null): string {
+  if (maxEmployees === null) return "Enterprise — Unlimited employees";
+  if (maxEmployees <= 15) return "Small Team — up to 15 employees · $49/mo";
+  if (maxEmployees <= 50) return "Medium Business — up to 50 employees · $99/mo";
+  if (maxEmployees <= 100) return "Large Business — up to 100 employees · $149/mo";
+  return `Up to ${maxEmployees} employees`;
+}
 
 export default function Admin() {
   const { me, isAdmin, isViewingAsEmployee, setIsViewingAsEmployee } = useMe();
+  const { maxEmployees } = useLicense();
+  const { data: employees } = useListEmployees();
   const [, setLocation] = useLocation();
   const isActualAdmin = me?.role === "admin";
+  const employeeCount = employees?.length ?? 0;
+  const atLimit = maxEmployees !== null && employeeCount >= maxEmployees;
+  const nearLimit = maxEmployees !== null && !atLimit && employeeCount >= maxEmployees - 2;
 
   if (!isActualAdmin) return <Redirect to="/dashboard" />;
 
@@ -129,6 +144,37 @@ export default function Admin() {
           </CardContent>
         </Card>
       )}
+
+      {/* Subscription tier card */}
+      <Card className={atLimit ? "border-destructive/50 bg-destructive/5" : nearLimit ? "border-amber-300 bg-amber-50/60" : "border-muted"}>
+        <CardContent className="py-3 px-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className={`h-4 w-4 shrink-0 ${atLimit ? "text-destructive" : nearLimit ? "text-amber-600" : "text-primary"}`} />
+              <div>
+                <p className="text-sm font-medium">
+                  {maxEmployees !== null ? tierLabel(maxEmployees) : "Enterprise — Unlimited employees"}
+                </p>
+                {maxEmployees !== null && (
+                  <p className={`text-xs mt-0.5 ${atLimit ? "text-destructive" : nearLimit ? "text-amber-600" : "text-muted-foreground"}`}>
+                    {employeeCount} of {maxEmployees} seats used
+                    {atLimit && " — limit reached, cannot add more employees"}
+                    {nearLimit && ` — ${maxEmployees - employeeCount} seat${maxEmployees - employeeCount === 1 ? "" : "s"} remaining`}
+                  </p>
+                )}
+              </div>
+            </div>
+            {maxEmployees !== null && (
+              <button
+                onClick={() => setLocation("/employees")}
+                className="text-xs text-primary hover:underline font-medium"
+              >
+                Manage employees →
+              </button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {adminLinks.map(({ href, icon: Icon, label, desc, badge }) => (

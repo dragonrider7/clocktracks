@@ -20,13 +20,24 @@ export interface LicenseStatus {
   expiresAt: string | null;
   daysRemaining: number | null;
   valid: boolean;
+  /** Maximum number of employees allowed. Null = unlimited. */
+  maxEmployees: number | null;
+}
+
+/** Human-readable tier label for a given maxEmployees value. */
+export function employeeTierLabel(maxEmployees: number | null): string {
+  if (maxEmployees === null) return "Enterprise (Unlimited)";
+  if (maxEmployees <= 15) return "Small Team (up to 15)";
+  if (maxEmployees <= 50) return "Medium Business (up to 50)";
+  if (maxEmployees <= 100) return "Large Business (up to 100)";
+  return `Up to ${maxEmployees} employees`;
 }
 
 export function checkLicense(rawKey?: string): LicenseStatus {
   const raw = rawKey;
 
   if (!raw || !raw.trim()) {
-    return { tier: "trial", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: false };
+    return { tier: "trial", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: false, maxEmployees: null };
   }
 
   try {
@@ -53,6 +64,7 @@ export function checkLicense(rawKey?: string): LicenseStatus {
       email?: string;
       exp: number;
       iat: number;
+      maxEmployees?: number | null;
     };
 
     const now = Date.now();
@@ -68,6 +80,10 @@ export function checkLicense(rawKey?: string): LicenseStatus {
     else if (daysRemaining >= -180) tier = "minimal";
     else tier = "locked";
 
+    const maxEmployees = (typeof payload.maxEmployees === "number" && payload.maxEmployees > 0)
+      ? payload.maxEmployees
+      : null;
+
     return {
       tier,
       customer: payload.sub,
@@ -75,8 +91,9 @@ export function checkLicense(rawKey?: string): LicenseStatus {
       expiresAt,
       daysRemaining,
       valid: daysRemaining > 0,
+      maxEmployees,
     };
   } catch {
-    return { tier: "locked", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: false };
+    return { tier: "locked", customer: null, email: null, expiresAt: null, daysRemaining: null, valid: false, maxEmployees: null };
   }
 }
