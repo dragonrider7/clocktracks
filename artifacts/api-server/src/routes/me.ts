@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { clerkClient } from "@clerk/express";
 import { db, employeesTable } from "@workspace/db";
@@ -87,15 +87,18 @@ router.get("/me", async (req, res): Promise<void> => {
   // Use the primary email from Clerk, trimmed
   const email = clerkUser.emailAddresses?.[0]?.emailAddress?.trim() ?? null;
 
-  // 3. Has anyone ever signed in? (any employee with a linked Clerk user ID)
-  //    Using linked count rather than total count so pre-seeded employee
-  //    records don't block the bootstrap admin on a fresh install.
-  const [{ count: linkedCount }] = await db
+  // 3. Has an admin ever signed in?
+  //    We check for admins specifically so that pre-seeded employee rows
+  //    (with or without clerk_user_id) on a fresh Docker install don't
+  //    prevent the bootstrap-admin flow from running. On a brand-new
+  //    instance, linkedAdminCount is 0 whether or not someone has already
+  //    manually inserted employee records into the database.
+  const [{ count: linkedAdminCount }] = await db
     .select({ count: db.$count(employeesTable) })
     .from(employeesTable)
-    .where(isNotNull(employeesTable.clerkUserId));
+    .where(and(isNotNull(employeesTable.clerkUserId), eq(employeesTable.role, "admin")));
 
-  const isFirstEverLogin = Number(linkedCount) === 0;
+  const isFirstEverLogin = Number(linkedAdminCount) === 0;
 
   if (isFirstEverLogin) {
     // ── Bootstrap admin ────────────────────────────────────────────────────
