@@ -687,9 +687,9 @@ export const getCreateTimeEntryUrl = () => {
 /**
  * @summary Manually create a past time entry (admin)
  */
-export const createTimeEntry = async (manualTimeEntryInput: ManualTimeEntryInput, options?: RequestInit): Promise<TimeEntry> => {
+export const createTimeEntry = async (manualTimeEntryInput: ManualTimeEntryInput, options?: RequestInit): Promise<TimeEntry[]> => {
 
-  return customFetch<TimeEntry>(getCreateTimeEntryUrl(),
+  return customFetch<TimeEntry[]>(getCreateTimeEntryUrl(),
   {
     ...options,
     method: 'POST',

@@ -21,6 +21,8 @@ function formatEntry(entry: typeof timeEntriesTable.$inferSelect, employeeName?:
       : null;
   return {
     ...entry,
+    kind: entry.kind ?? "work",
+    timeOffType: entry.timeOffType ?? null,
     employeeName: employeeName ?? null,
     clockIn: entry.clockIn.toISOString(),
     clockOut: entry.clockOut ? entry.clockOut.toISOString() : null,
@@ -78,17 +80,71 @@ router.post("/time-entries", async (req, res): Promise<void> => {
     return;
   }
 
+  const kind = parsed.data.kind ?? "work";
+
+  if (kind === "time_off") {
+    const startDateStr = parsed.data.startDate;
+    const endDateStr = parsed.data.endDate ?? parsed.data.startDate;
+    if (!startDateStr) {
+      res.status(400).json({ error: "startDate is required for time_off entries" });
+      return;
+    }
+    const timeOffType = parsed.data.timeOffType ?? null;
+    const hoursPerDay = parsed.data.hoursPerDay ?? 8;
+    const notes = parsed.data.notes ?? null;
+
+    const start = new Date(startDateStr + "T00:00:00");
+    const end = new Date((endDateStr ?? startDateStr) + "T00:00:00");
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+      res.status(400).json({ error: "Invalid date range" });
+      return;
+    }
+
+    const toInsert: (typeof timeEntriesTable.$inferInsert)[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const clockIn = new Date(cursor);
+      clockIn.setHours(0, 0, 0, 0);
+      const clockOut = new Date(cursor);
+      clockOut.setHours(0, hoursPerDay * 60, 0, 0);
+
+      toInsert.push({
+        employeeId: parsed.data.employeeId,
+        kind: "time_off",
+        timeOffType,
+        clockIn,
+        clockOut,
+        notes,
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const inserted = await db.insert(timeEntriesTable).values(toInsert).returning();
+    res.status(201).json(inserted.map((e) => formatEntry(e, employee.name)));
+    return;
+  }
+
+  // kind === "work"
+  if (!parsed.data.clockIn) {
+    res.status(400).json({ error: "clockIn is required for work entries" });
+    return;
+  }
+
   const [entry] = await db
     .insert(timeEntriesTable)
     .values({
       employeeId: parsed.data.employeeId,
+      kind: "work",
+      timeOffType: null,
       clockIn: new Date(parsed.data.clockIn),
       clockOut: parsed.data.clockOut ? new Date(parsed.data.clockOut) : null,
       notes: parsed.data.notes ?? null,
     })
     .returning();
 
-  res.status(201).json(formatEntry(entry, employee.name));
+  res.status(201).json([formatEntry(entry, employee.name)]);
 });
 
 router.post("/time-entries/clock-in", async (req, res): Promise<void> => {
@@ -123,6 +179,7 @@ router.post("/time-entries/clock-in", async (req, res): Promise<void> => {
     .insert(timeEntriesTable)
     .values({
       employeeId: parsed.data.employeeId,
+      kind: "work",
       notes: parsed.data.notes ?? null,
     })
     .returning();
@@ -183,6 +240,8 @@ router.patch("/time-entries/:id", async (req, res): Promise<void> => {
   }
 
   const updates: Record<string, unknown> = {};
+  if (parsed.data.kind) updates.kind = parsed.data.kind;
+  if ("timeOffType" in parsed.data) updates.timeOffType = parsed.data.timeOffType ?? null;
   if (parsed.data.clockIn) updates.clockIn = new Date(parsed.data.clockIn);
   if (parsed.data.clockOut) updates.clockOut = new Date(parsed.data.clockOut);
   if (parsed.data.notes != null) updates.notes = parsed.data.notes;

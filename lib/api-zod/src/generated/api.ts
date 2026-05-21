@@ -157,6 +157,8 @@ export const ListTimeEntriesResponseItem = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
+  "kind": zod.enum(['work', 'time_off']),
+  "timeOffType": zod.string().nullish(),
   "clockIn": zod.string(),
   "clockOut": zod.string().nullish(),
   "notes": zod.string().nullish(),
@@ -169,10 +171,17 @@ export const ListTimeEntriesResponse = zod.array(ListTimeEntriesResponseItem)
 /**
  * @summary Manually create a past time entry (admin)
  */
+export const createTimeEntryBodyKindDefault = `work`;
+
 export const CreateTimeEntryBody = zod.object({
   "employeeId": zod.number(),
-  "clockIn": zod.string(),
+  "kind": zod.enum(['work', 'time_off']).default(createTimeEntryBodyKindDefault),
+  "timeOffType": zod.enum(['pto', 'sick', 'bereavement']).optional(),
+  "clockIn": zod.string().optional(),
   "clockOut": zod.string().optional(),
+  "startDate": zod.string().optional().describe('YYYY-MM-DD — start date for time-off range'),
+  "endDate": zod.string().optional().describe('YYYY-MM-DD — end date for time-off range (defaults to startDate)'),
+  "hoursPerDay": zod.number().optional().describe('Hours to credit per day for time-off entries (default 8)'),
   "notes": zod.string().optional()
 })
 
@@ -201,6 +210,8 @@ export const ClockOutResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
+  "kind": zod.enum(['work', 'time_off']),
+  "timeOffType": zod.string().nullish(),
   "clockIn": zod.string(),
   "clockOut": zod.string().nullish(),
   "notes": zod.string().nullish(),
@@ -217,6 +228,8 @@ export const UpdateTimeEntryParams = zod.object({
 })
 
 export const UpdateTimeEntryBody = zod.object({
+  "kind": zod.enum(['work', 'time_off']).optional(),
+  "timeOffType": zod.string().optional(),
   "clockIn": zod.string().optional(),
   "clockOut": zod.string().optional(),
   "notes": zod.string().optional()
@@ -226,6 +239,8 @@ export const UpdateTimeEntryResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
+  "kind": zod.enum(['work', 'time_off']),
+  "timeOffType": zod.string().nullish(),
   "clockIn": zod.string(),
   "clockOut": zod.string().nullish(),
   "notes": zod.string().nullish(),

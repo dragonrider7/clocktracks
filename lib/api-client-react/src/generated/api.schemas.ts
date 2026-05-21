@@ -82,11 +82,22 @@ export interface EmployeeUpdate {
   birthday?: string;
 }
 
+export type TimeEntryKind = typeof TimeEntryKind[keyof typeof TimeEntryKind];
+
+
+export const TimeEntryKind = {
+  work: 'work',
+  time_off: 'time_off',
+} as const;
+
 export interface TimeEntry {
   id: number;
   employeeId: number;
   /** @nullable */
   employeeName?: string | null;
+  kind: TimeEntryKind;
+  /** @nullable */
+  timeOffType?: string | null;
   clockIn: string;
   /** @nullable */
   clockOut?: string | null;
@@ -106,7 +117,17 @@ export interface ClockOutInput {
   notes?: string;
 }
 
+export type TimeEntryUpdateKind = typeof TimeEntryUpdateKind[keyof typeof TimeEntryUpdateKind];
+
+
+export const TimeEntryUpdateKind = {
+  work: 'work',
+  time_off: 'time_off',
+} as const;
+
 export interface TimeEntryUpdate {
+  kind?: TimeEntryUpdateKind;
+  timeOffType?: string;
   clockIn?: string;
   clockOut?: string;
   notes?: string;
@@ -194,10 +215,35 @@ export interface SeedHolidaysResult {
   skipped: number;
 }
 
+export type ManualTimeEntryInputKind = typeof ManualTimeEntryInputKind[keyof typeof ManualTimeEntryInputKind];
+
+
+export const ManualTimeEntryInputKind = {
+  work: 'work',
+  time_off: 'time_off',
+} as const;
+
+export type ManualTimeEntryInputTimeOffType = typeof ManualTimeEntryInputTimeOffType[keyof typeof ManualTimeEntryInputTimeOffType];
+
+
+export const ManualTimeEntryInputTimeOffType = {
+  pto: 'pto',
+  sick: 'sick',
+  bereavement: 'bereavement',
+} as const;
+
 export interface ManualTimeEntryInput {
   employeeId: number;
-  clockIn: string;
+  kind?: ManualTimeEntryInputKind;
+  timeOffType?: ManualTimeEntryInputTimeOffType;
+  clockIn?: string;
   clockOut?: string;
+  /** YYYY-MM-DD — start date for time-off range */
+  startDate?: string;
+  /** YYYY-MM-DD — end date for time-off range (defaults to startDate) */
+  endDate?: string;
+  /** Hours to credit per day for time-off entries (default 8) */
+  hoursPerDay?: number;
   notes?: string;
 }
 

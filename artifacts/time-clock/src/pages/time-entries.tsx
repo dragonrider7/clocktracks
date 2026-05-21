@@ -32,6 +32,26 @@ function formatDuration(mins: number | null | undefined): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+const TIME_OFF_LABELS: Record<string, string> = {
+  pto: "PTO",
+  sick: "Sick",
+  bereavement: "Bereavement",
+};
+
+function EntryBadge({ kind, timeOffType }: { kind?: string | null; timeOffType?: string | null }) {
+  if (!kind || kind === "work") {
+    return <Badge variant="secondary">Worked</Badge>;
+  }
+  const label = timeOffType ? (TIME_OFF_LABELS[timeOffType] ?? timeOffType) : "Time Off";
+  const colors: Record<string, string> = {
+    pto: "bg-blue-100 text-blue-800 border-blue-200",
+    sick: "bg-orange-100 text-orange-800 border-orange-200",
+    bereavement: "bg-purple-100 text-purple-800 border-purple-200",
+  };
+  const cls = timeOffType ? (colors[timeOffType] ?? "bg-muted text-muted-foreground") : "bg-muted text-muted-foreground";
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+}
+
 export default function TimeEntries() {
   const { isAdmin, me } = useMe();
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
@@ -60,16 +80,29 @@ export default function TimeEntries() {
     clockIn: string;
     clockOut: string;
     notes: string;
+    kind: string;
+    timeOffType: string;
   } | null>(null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newEntry, setNewEntry] = useState({
+  const [addMode, setAddMode] = useState<"work" | "time_off">("work");
+
+  const [workEntry, setWorkEntry] = useState({
     employeeId: "",
     date: new Date().toISOString().split("T")[0],
     clockInTime: "09:00",
     clockOutTime: "17:00",
-    notes: "",
     hasClockOut: true,
+    notes: "",
+  });
+
+  const [timeOffEntry, setTimeOffEntry] = useState({
+    employeeId: "",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date().toISOString().split("T")[0],
+    timeOffType: "pto",
+    hoursPerDay: "8",
+    notes: "",
   });
 
   const invalidate = () =>
@@ -88,7 +121,16 @@ export default function TimeEntries() {
   const handleUpdate = () => {
     if (!editEntry) return;
     updateMutation.mutate(
-      { id: editEntry.id, data: { clockIn: editEntry.clockIn, clockOut: editEntry.clockOut || undefined, notes: editEntry.notes || undefined } },
+      {
+        id: editEntry.id,
+        data: {
+          clockIn: editEntry.clockIn,
+          clockOut: editEntry.clockOut || undefined,
+          notes: editEntry.notes || undefined,
+          kind: editEntry.kind as "work" | "time_off",
+          timeOffType: editEntry.timeOffType || undefined,
+        },
+      },
       {
         onSuccess: () => {
           toast({ title: "Entry updated" });
@@ -99,20 +141,47 @@ export default function TimeEntries() {
     );
   };
 
-  const handleAdd = () => {
-    if (!newEntry.employeeId || !newEntry.date || !newEntry.clockInTime) return;
-    const clockIn = `${newEntry.date}T${newEntry.clockInTime}:00`;
-    const clockOut = newEntry.hasClockOut && newEntry.clockOutTime
-      ? `${newEntry.date}T${newEntry.clockOutTime}:00`
+  const handleAddWork = () => {
+    if (!workEntry.employeeId || !workEntry.date || !workEntry.clockInTime) return;
+    const clockIn = `${workEntry.date}T${workEntry.clockInTime}:00`;
+    const clockOut = workEntry.hasClockOut && workEntry.clockOutTime
+      ? `${workEntry.date}T${workEntry.clockOutTime}:00`
       : undefined;
 
     createMutation.mutate(
-      { data: { employeeId: parseInt(newEntry.employeeId), clockIn, clockOut, notes: newEntry.notes || undefined } },
+      { data: { employeeId: parseInt(workEntry.employeeId), kind: "work", clockIn, clockOut, notes: workEntry.notes || undefined } },
       {
         onSuccess: () => {
           toast({ title: "Time entry added" });
           setIsAddOpen(false);
-          setNewEntry({ employeeId: "", date: new Date().toISOString().split("T")[0], clockInTime: "09:00", clockOutTime: "17:00", notes: "", hasClockOut: true });
+          setWorkEntry({ employeeId: "", date: new Date().toISOString().split("T")[0], clockInTime: "09:00", clockOutTime: "17:00", hasClockOut: true, notes: "" });
+          invalidate();
+        },
+      }
+    );
+  };
+
+  const handleAddTimeOff = () => {
+    if (!timeOffEntry.employeeId || !timeOffEntry.startDate) return;
+    const hours = parseInt(timeOffEntry.hoursPerDay) || 8;
+    createMutation.mutate(
+      {
+        data: {
+          employeeId: parseInt(timeOffEntry.employeeId),
+          kind: "time_off",
+          timeOffType: timeOffEntry.timeOffType as "pto" | "sick" | "bereavement",
+          startDate: timeOffEntry.startDate,
+          endDate: timeOffEntry.endDate || timeOffEntry.startDate,
+          hoursPerDay: hours,
+          notes: timeOffEntry.notes || undefined,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          const count = Array.isArray(data) ? data.length : 1;
+          toast({ title: `${count} time-off ${count === 1 ? "entry" : "entries"} added` });
+          setIsAddOpen(false);
+          setTimeOffEntry({ employeeId: "", startDate: new Date().toISOString().split("T")[0], endDate: new Date().toISOString().split("T")[0], timeOffType: "pto", hoursPerDay: "8", notes: "" });
           invalidate();
         },
       }
@@ -129,77 +198,175 @@ export default function TimeEntries() {
               <DialogTrigger asChild>
                 <Button size="sm" variant="outline" className="gap-2">
                   <PlusCircle className="w-4 h-4" />
-                  Add Past Entry
+                  Add Entry
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Add Past Time Entry</DialogTitle></DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div>
-                    <label className="text-sm font-medium">Employee</label>
-                    <Select value={newEntry.employeeId} onValueChange={(v) => setNewEntry({ ...newEntry, employeeId: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-                      <SelectContent>
-                        {employees?.map((e) => (
-                          <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Date</label>
-                    <Input
-                      type="date"
-                      value={newEntry.date}
-                      onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Add Time Entry</DialogTitle></DialogHeader>
+
+                {/* Mode tabs */}
+                <div className="flex rounded-lg border overflow-hidden mt-1">
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition-colors ${addMode === "work" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    onClick={() => setAddMode("work")}
+                  >
+                    Worked Time
+                  </button>
+                  <button
+                    className={`flex-1 py-2 text-sm font-medium transition-colors ${addMode === "time_off" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    onClick={() => setAddMode("time_off")}
+                  >
+                    Time Off / PTO
+                  </button>
+                </div>
+
+                {addMode === "work" ? (
+                  <div className="space-y-4 pt-2">
                     <div>
-                      <label className="text-sm font-medium">Clock In Time</label>
+                      <label className="text-sm font-medium">Employee</label>
+                      <Select value={workEntry.employeeId} onValueChange={(v) => setWorkEntry({ ...workEntry, employeeId: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                        <SelectContent>
+                          {employees?.map((e) => (
+                            <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Date</label>
                       <Input
-                        type="time"
-                        value={newEntry.clockInTime}
-                        onChange={(e) => setNewEntry({ ...newEntry, clockInTime: e.target.value })}
+                        type="date"
+                        value={workEntry.date}
+                        onChange={(e) => setWorkEntry({ ...workEntry, date: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium">Clock In</label>
+                        <Input
+                          type="time"
+                          value={workEntry.clockInTime}
+                          onChange={(e) => setWorkEntry({ ...workEntry, clockInTime: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Clock Out</label>
+                        <div className="space-y-1.5">
+                          <Input
+                            type="time"
+                            value={workEntry.clockOutTime}
+                            disabled={!workEntry.hasClockOut}
+                            onChange={(e) => setWorkEntry({ ...workEntry, clockOutTime: e.target.value })}
+                          />
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!workEntry.hasClockOut}
+                              onChange={(e) => setWorkEntry({ ...workEntry, hasClockOut: !e.target.checked })}
+                              className="rounded"
+                            />
+                            Still clocked in
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Notes (optional)</label>
+                      <Input
+                        value={workEntry.notes}
+                        onChange={(e) => setWorkEntry({ ...workEntry, notes: e.target.value })}
+                        placeholder="e.g. Worked remotely"
+                      />
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={handleAddWork}
+                      disabled={!workEntry.employeeId || !workEntry.date || !workEntry.clockInTime || createMutation.isPending}
+                    >
+                      Add Entry
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <label className="text-sm font-medium">Employee</label>
+                      <Select value={timeOffEntry.employeeId} onValueChange={(v) => setTimeOffEntry({ ...timeOffEntry, employeeId: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                        <SelectContent>
+                          {employees?.map((e) => (
+                            <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Type</label>
+                      <Select value={timeOffEntry.timeOffType} onValueChange={(v) => setTimeOffEntry({ ...timeOffEntry, timeOffType: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pto">PTO (Paid Time Off)</SelectItem>
+                          <SelectItem value="sick">Sick Time</SelectItem>
+                          <SelectItem value="bereavement">Bereavement</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium">Start Date</label>
+                        <Input
+                          type="date"
+                          value={timeOffEntry.startDate}
+                          onChange={(e) => setTimeOffEntry({ ...timeOffEntry, startDate: e.target.value, endDate: timeOffEntry.endDate < e.target.value ? e.target.value : timeOffEntry.endDate })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">End Date</label>
+                        <Input
+                          type="date"
+                          value={timeOffEntry.endDate}
+                          min={timeOffEntry.startDate}
+                          onChange={(e) => setTimeOffEntry({ ...timeOffEntry, endDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Hours Per Day</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="24"
+                        value={timeOffEntry.hoursPerDay}
+                        onChange={(e) => setTimeOffEntry({ ...timeOffEntry, hoursPerDay: e.target.value })}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Clock Out Time</label>
-                      <div className="space-y-1.5">
-                        <Input
-                          type="time"
-                          value={newEntry.clockOutTime}
-                          disabled={!newEntry.hasClockOut}
-                          onChange={(e) => setNewEntry({ ...newEntry, clockOutTime: e.target.value })}
-                        />
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={!newEntry.hasClockOut}
-                            onChange={(e) => setNewEntry({ ...newEntry, hasClockOut: !e.target.checked })}
-                            className="rounded"
-                          />
-                          Still clocked in (no clock out)
-                        </label>
-                      </div>
+                      <label className="text-sm font-medium">Notes (optional)</label>
+                      <Input
+                        value={timeOffEntry.notes}
+                        onChange={(e) => setTimeOffEntry({ ...timeOffEntry, notes: e.target.value })}
+                        placeholder="e.g. Family vacation"
+                      />
                     </div>
+                    {timeOffEntry.startDate && timeOffEntry.endDate && timeOffEntry.startDate <= timeOffEntry.endDate && (
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const start = new Date(timeOffEntry.startDate + "T00:00:00");
+                          const end = new Date(timeOffEntry.endDate + "T00:00:00");
+                          const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+                          return `${days} ${days === 1 ? "day" : "days"} × ${timeOffEntry.hoursPerDay}h = ${days * (parseInt(timeOffEntry.hoursPerDay) || 8)}h total`;
+                        })()}
+                      </p>
+                    )}
+                    <Button
+                      className="w-full"
+                      onClick={handleAddTimeOff}
+                      disabled={!timeOffEntry.employeeId || !timeOffEntry.startDate || createMutation.isPending}
+                    >
+                      Add Time Off
+                    </Button>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Notes (optional)</label>
-                    <Input
-                      value={newEntry.notes}
-                      onChange={(e) => setNewEntry({ ...newEntry, notes: e.target.value })}
-                      placeholder="e.g. Worked remotely"
-                    />
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={handleAdd}
-                    disabled={!newEntry.employeeId || !newEntry.date || !newEntry.clockInTime || createMutation.isPending}
-                  >
-                    Add Entry
-                  </Button>
-                </div>
+                )}
               </DialogContent>
             </Dialog>
           )}
@@ -252,7 +419,7 @@ export default function TimeEntries() {
               <TableHead>Clock In</TableHead>
               <TableHead>Clock Out</TableHead>
               <TableHead>Duration</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Notes</TableHead>
               {isAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
@@ -274,19 +441,23 @@ export default function TimeEntries() {
                   {isAdmin && <TableCell className="font-medium">{entry.employeeName}</TableCell>}
                   <TableCell>{new Date(entry.clockIn).toLocaleDateString()}</TableCell>
                   <TableCell className="font-mono text-sm">
-                    {new Date(entry.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {entry.kind === "time_off"
+                      ? "—"
+                      : new Date(entry.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    {entry.clockOut
-                      ? new Date(entry.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                      : "—"}
+                    {entry.kind === "time_off"
+                      ? "—"
+                      : entry.clockOut
+                        ? new Date(entry.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : "—"}
                   </TableCell>
                   <TableCell>{formatDuration(entry.totalMinutes)}</TableCell>
                   <TableCell>
-                    {!entry.clockOut ? (
+                    {entry.kind === "work" && !entry.clockOut ? (
                       <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
                     ) : (
-                      <Badge variant="secondary">Completed</Badge>
+                      <EntryBadge kind={entry.kind} timeOffType={entry.timeOffType} />
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
@@ -305,6 +476,8 @@ export default function TimeEntries() {
                               clockIn: toLocalInput(entry.clockIn),
                               clockOut: entry.clockOut ? toLocalInput(entry.clockOut) : "",
                               notes: entry.notes ?? "",
+                              kind: entry.kind ?? "work",
+                              timeOffType: entry.timeOffType ?? "",
                             })
                           }
                         >
@@ -328,11 +501,41 @@ export default function TimeEntries() {
         </Table>
       </CardContent>
 
+      {/* Edit dialog */}
       <Dialog open={!!editEntry} onOpenChange={(open) => !open && setEditEntry(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Time Entry</DialogTitle></DialogHeader>
           {editEntry && (
             <div className="space-y-4 pt-4">
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <Select
+                  value={editEntry.kind}
+                  onValueChange={(v) => setEditEntry({ ...editEntry, kind: v, timeOffType: v === "work" ? "" : editEntry.timeOffType })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="work">Worked Time</SelectItem>
+                    <SelectItem value="time_off">Time Off</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editEntry.kind === "time_off" && (
+                <div>
+                  <label className="text-sm font-medium">Time Off Type</label>
+                  <Select
+                    value={editEntry.timeOffType}
+                    onValueChange={(v) => setEditEntry({ ...editEntry, timeOffType: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pto">PTO</SelectItem>
+                      <SelectItem value="sick">Sick</SelectItem>
+                      <SelectItem value="bereavement">Bereavement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium">Clock In</label>
                 <Input

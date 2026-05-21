@@ -5,8 +5,11 @@
  * Time Clock API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TimeEntryUpdateKind } from './timeEntryUpdateKind';
 
 export interface TimeEntryUpdate {
+  kind?: TimeEntryUpdateKind;
+  timeOffType?: string;
   clockIn?: string;
   clockOut?: string;
   notes?: string;

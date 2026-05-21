@@ -5,12 +5,16 @@
  * Time Clock API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TimeEntryKind } from './timeEntryKind';
 
 export interface TimeEntry {
   id: number;
   employeeId: number;
   /** @nullable */
   employeeName?: string | null;
+  kind: TimeEntryKind;
+  /** @nullable */
+  timeOffType?: string | null;
   clockIn: string;
   /** @nullable */
   clockOut?: string | null;

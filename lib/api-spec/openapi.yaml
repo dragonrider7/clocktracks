@@ -194,11 +194,13 @@ paths:
               $ref: "#/components/schemas/ManualTimeEntryInput"
       responses:
         "201":
-          description: Created
+          description: Created (one or more entries for multi-day time-off)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TimeEntry"
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeEntry"
         "400":
           description: Invalid input
 
@@ -863,13 +865,18 @@ components:
 
     TimeEntry:
       type: object
-      required: [id, employeeId, clockIn, createdAt]
+      required: [id, employeeId, clockIn, createdAt, kind]
       properties:
         id:
           type: integer
         employeeId:
           type: integer
         employeeName:
+          type: ["string", "null"]
+        kind:
+          type: string
+          enum: [work, time_off]
+        timeOffType:
           type: ["string", "null"]
         clockIn:
           type: string
@@ -900,6 +907,11 @@ components:
     TimeEntryUpdate:
       type: object
       properties:
+        kind:
+          type: string
+          enum: [work, time_off]
+        timeOffType:
+          type: string
         clockIn:
           type: string
         clockOut:
@@ -993,14 +1005,30 @@ components:
 
     ManualTimeEntryInput:
       type: object
-      required: [employeeId, clockIn]
+      required: [employeeId]
       properties:
         employeeId:
           type: integer
+        kind:
+          type: string
+          enum: [work, time_off]
+          default: work
+        timeOffType:
+          type: string
+          enum: [pto, sick, bereavement]
         clockIn:
           type: string
         clockOut:
           type: string
+        startDate:
+          type: string
+          description: "YYYY-MM-DD — start date for time-off range"
+        endDate:
+          type: string
+          description: "YYYY-MM-DD — end date for time-off range (defaults to startDate)"
+        hoursPerDay:
+          type: integer
+          description: "Hours to credit per day for time-off entries (default 8)"
         notes:
           type: string
 

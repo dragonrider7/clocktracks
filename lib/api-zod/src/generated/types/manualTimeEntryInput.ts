@@ -5,10 +5,20 @@
  * Time Clock API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ManualTimeEntryInputKind } from './manualTimeEntryInputKind';
+import type { ManualTimeEntryInputTimeOffType } from './manualTimeEntryInputTimeOffType';
 
 export interface ManualTimeEntryInput {
   employeeId: number;
-  clockIn: string;
+  kind?: ManualTimeEntryInputKind;
+  timeOffType?: ManualTimeEntryInputTimeOffType;
+  clockIn?: string;
   clockOut?: string;
+  /** YYYY-MM-DD — start date for time-off range */
+  startDate?: string;
+  /** YYYY-MM-DD — end date for time-off range (defaults to startDate) */
+  endDate?: string;
+  /** Hours to credit per day for time-off entries (default 8) */
+  hoursPerDay?: number;
   notes?: string;
 }

@@ -5,6 +5,8 @@ import { z } from "zod/v4";
 export const timeEntriesTable = pgTable("time_entries", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").notNull(),
+  kind: text("kind").notNull().default("work"),
+  timeOffType: text("time_off_type"),
   clockIn: timestamp("clock_in", { withTimezone: true }).notNull().defaultNow(),
   clockOut: timestamp("clock_out", { withTimezone: true }),
   notes: text("notes"),
