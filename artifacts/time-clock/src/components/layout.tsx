@@ -252,7 +252,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="flex items-center gap-2 px-5 py-4"
                   style={{ background: `linear-gradient(to right, hsl(var(--primary)), hsl(var(--nav-gradient-to)))` }}
                 >
-                  <img src={`${basePath}/clocktracks-logo-dark.png`} alt="ClockTracks" className="h-8 w-auto" />
+                  <img src={`${basePath}/clocktracks-logo-dark.png`} alt="ClockTracks" className="h-10 w-auto" />
                 </div>
                 <nav className="flex flex-col gap-1 p-3 flex-1">
                   {navItems.map((item) => {
@@ -290,7 +290,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Sheet>
 
             <div className="flex items-center shrink-0">
-              <img src={`${basePath}/clocktracks-logo-dark.png`} alt="ClockTracks" className="h-8 w-auto md:block hidden" />
+              <img src={`${basePath}/clocktracks-logo-dark.png`} alt="ClockTracks" className="h-10 w-auto md:block hidden" />
             </div>
             <nav className="hidden md:flex gap-1 text-sm font-medium">
               {navItems.map((item) => {

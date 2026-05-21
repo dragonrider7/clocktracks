@@ -215,7 +215,7 @@ function LandingPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-8 px-4">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex items-center">
-          <img src={`${basePath}/clocktracks-logo-light.png`} alt="ClockTracks" className="h-16 w-auto" />
+          <img src={`${basePath}/clocktracks-logo-light.png`} alt="ClockTracks" className="h-24 w-auto" />
         </div>
         <p className="text-muted-foreground max-w-md text-lg">
           Simple, reliable time tracking for your team. Clock in and out, track hours, and manage time off — all in one place.
