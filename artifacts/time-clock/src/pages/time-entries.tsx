@@ -16,8 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Pencil, Filter, PlusCircle } from "lucide-react";
+import { Trash2, Pencil, Filter, PlusCircle, Timer } from "lucide-react";
 import { useMe } from "@/contexts/me-context";
+import { useRunningClock } from "@/hooks/use-running-clock";
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
@@ -50,6 +51,81 @@ function EntryBadge({ kind, timeOffType }: { kind?: string | null; timeOffType?:
   };
   const cls = timeOffType ? (colors[timeOffType] ?? "bg-muted text-muted-foreground") : "bg-muted text-muted-foreground";
   return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+}
+
+/** Live duration cell for an active (not yet clocked-out) work entry. */
+function ActiveDuration({ clockIn }: { clockIn: string }) {
+  const elapsed = useRunningClock(clockIn);
+  return (
+    <span className="inline-flex items-center gap-1 text-green-700 font-semibold">
+      <Timer className="h-3 w-3" />
+      {elapsed}
+    </span>
+  );
+}
+
+/** Identifies whether a clockIn timestamp falls on today (local time). */
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+interface TimeEntry {
+  id: number;
+  employeeId: number;
+  kind?: string | null;
+  clockIn: string;
+  clockOut?: string | null;
+  totalMinutes?: number | null;
+  notes?: string | null;
+  employeeName?: string | null;
+  timeOffType?: string | null;
+}
+
+/**
+ * Banner showing the total hours accumulated today for a given employee
+ * (completed sessions + the live active session).
+ */
+function TodaySummary({
+  entries,
+  employeeId,
+}: {
+  entries: TimeEntry[];
+  employeeId: number | null;
+}) {
+  const todayWork = entries.filter(
+    (e) =>
+      e.kind === "work" &&
+      isToday(e.clockIn) &&
+      (employeeId == null || e.employeeId === employeeId),
+  );
+
+  const completedMins = todayWork
+    .filter((e) => e.clockOut)
+    .reduce((sum, e) => sum + (e.totalMinutes ?? 0), 0);
+
+  const activeEntry = todayWork.find((e) => !e.clockOut) ?? null;
+  const elapsed = useRunningClock(activeEntry?.clockIn ?? null, completedMins);
+
+  if (todayWork.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-sm mb-3">
+      <Timer className="h-4 w-4 text-emerald-600 shrink-0" />
+      <span className="text-emerald-800">
+        <span className="font-medium">Today's total:</span>{" "}
+        <span className="font-bold">{elapsed}</span>
+        {activeEntry && (
+          <span className="text-emerald-600 ml-1">· session active</span>
+        )}
+      </span>
+    </div>
+  );
 }
 
 export default function TimeEntries() {
@@ -187,6 +263,12 @@ export default function TimeEntries() {
       }
     );
   };
+
+  // Which employee's "Today" summary to show:
+  // non-admin → always current user; admin → selected filter or null (show all)
+  const summaryEmployeeId = isAdmin
+    ? filterEmployee !== "all" ? parseInt(filterEmployee) : null
+    : (me?.id ?? null);
 
   return (
     <Card>
@@ -411,6 +493,9 @@ export default function TimeEntries() {
         </div>
       </CardHeader>
       <CardContent>
+        {!isLoading && entries && entries.length > 0 && (
+          <TodaySummary entries={entries} employeeId={summaryEmployeeId} />
+        )}
         <Table>
           <TableHeader>
             <TableRow>
@@ -436,66 +521,75 @@ export default function TimeEntries() {
                 </TableCell>
               </TableRow>
             ) : (
-              entries?.map((entry) => (
-                <TableRow key={entry.id} data-testid={`row-entry-${entry.id}`}>
-                  {isAdmin && <TableCell className="font-medium">{entry.employeeName}</TableCell>}
-                  <TableCell>{new Date(entry.clockIn).toLocaleDateString()}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {entry.kind === "time_off"
-                      ? "—"
-                      : new Date(entry.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {entry.kind === "time_off"
-                      ? "—"
-                      : entry.clockOut
-                        ? new Date(entry.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                        : "—"}
-                  </TableCell>
-                  <TableCell>{formatDuration(entry.totalMinutes)}</TableCell>
-                  <TableCell>
-                    {entry.kind === "work" && !entry.clockOut ? (
-                      <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
-                    ) : (
-                      <EntryBadge kind={entry.kind} timeOffType={entry.timeOffType} />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                    {entry.notes || "—"}
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          data-testid={`button-edit-entry-${entry.id}`}
-                          onClick={() =>
-                            setEditEntry({
-                              id: entry.id,
-                              clockIn: toLocalInput(entry.clockIn),
-                              clockOut: entry.clockOut ? toLocalInput(entry.clockOut) : "",
-                              notes: entry.notes ?? "",
-                              kind: entry.kind ?? "work",
-                              timeOffType: entry.timeOffType ?? "",
-                            })
-                          }
-                        >
-                          <Pencil className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          data-testid={`button-delete-entry-${entry.id}`}
-                          onClick={() => handleDelete(entry.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
+              entries?.map((entry) => {
+                const isActive = entry.kind === "work" && !entry.clockOut;
+                return (
+                  <TableRow key={entry.id} data-testid={`row-entry-${entry.id}`}>
+                    {isAdmin && <TableCell className="font-medium">{entry.employeeName}</TableCell>}
+                    <TableCell>{new Date(entry.clockIn).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {entry.kind === "time_off"
+                        ? "—"
+                        : new Date(entry.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </TableCell>
-                  )}
-                </TableRow>
-              ))
+                    <TableCell className="font-mono text-sm">
+                      {entry.kind === "time_off"
+                        ? "—"
+                        : entry.clockOut
+                          ? new Date(entry.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                          : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {isActive ? (
+                        <ActiveDuration clockIn={entry.clockIn} />
+                      ) : (
+                        formatDuration(entry.totalMinutes)
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isActive ? (
+                        <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
+                      ) : (
+                        <EntryBadge kind={entry.kind} timeOffType={entry.timeOffType} />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                      {entry.notes || "—"}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-edit-entry-${entry.id}`}
+                            onClick={() =>
+                              setEditEntry({
+                                id: entry.id,
+                                clockIn: toLocalInput(entry.clockIn),
+                                clockOut: entry.clockOut ? toLocalInput(entry.clockOut) : "",
+                                notes: entry.notes ?? "",
+                                kind: entry.kind ?? "work",
+                                timeOffType: entry.timeOffType ?? "",
+                              })
+                            }
+                          >
+                            <Pencil className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-delete-entry-${entry.id}`}
+                            onClick={() => handleDelete(entry.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -557,16 +651,16 @@ export default function TimeEntries() {
                 <Input
                   value={editEntry.notes}
                   onChange={(e) => setEditEntry({ ...editEntry, notes: e.target.value })}
-                  placeholder="Optional notes"
                 />
               </div>
-              <Button
-                className="w-full"
-                onClick={handleUpdate}
-                disabled={!editEntry.clockIn || updateMutation.isPending}
-              >
-                Save Changes
-              </Button>
+              <div className="flex gap-3">
+                <Button className="flex-1" onClick={handleUpdate} disabled={updateMutation.isPending}>
+                  Save
+                </Button>
+                <Button variant="outline" onClick={() => setEditEntry(null)}>
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

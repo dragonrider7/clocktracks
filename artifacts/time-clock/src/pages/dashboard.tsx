@@ -7,11 +7,12 @@ import {
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star, ArrowRight, ChevronRight } from "lucide-react";
+import { Users, Clock, CalendarIcon, Umbrella, TrendingUp, Gift, Star, ArrowRight, ChevronRight, Timer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeAvatar } from "@/components/employee-avatar";
 import { useLocation } from "wouter";
 import { useMe } from "@/contexts/me-context";
+import { useRunningClock } from "@/hooks/use-running-clock";
 
 const TYPE_COLORS: Record<string, string> = {
   vacation: "bg-blue-100 text-blue-700",
@@ -74,6 +75,70 @@ function ViewAllLink({ onClick }: { onClick: () => void }) {
   );
 }
 
+interface ClockedInEmployee {
+  employeeId: number;
+  employeeName: string;
+  department?: string | null;
+  imageUrl?: string | null;
+  clockIn: string;
+  timeEntryId: number;
+}
+
+function ClockedInRow({ emp, onClick }: { emp: ClockedInEmployee; onClick: () => void }) {
+  const elapsed = useRunningClock(emp.clockIn);
+  return (
+    <button
+      key={emp.employeeId}
+      onClick={onClick}
+      className="w-full flex items-center justify-between rounded-xl bg-muted/30 px-4 py-3 hover:bg-muted/60 transition-colors group text-left"
+    >
+      <div className="flex items-center gap-3">
+        <EmployeeAvatar name={emp.employeeName} imageUrl={emp.imageUrl} size="md" />
+        <div>
+          <p className="text-sm font-semibold leading-none">{emp.employeeName}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{emp.department ?? "No Department"}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+        <div className="text-right">
+          <div className="text-xs text-muted-foreground font-medium">
+            Since {new Date(emp.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </div>
+          <div className="text-xs font-semibold text-green-700 flex items-center gap-0.5 justify-end">
+            <Timer className="h-3 w-3" />
+            {elapsed}
+          </div>
+        </div>
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </button>
+  );
+}
+
+function MyHoursTodayCard({
+  clockIn,
+  isLoading,
+  onClick,
+}: {
+  clockIn: string | null;
+  isLoading: boolean;
+  onClick: () => void;
+}) {
+  const elapsed = useRunningClock(clockIn);
+  return (
+    <StatCard
+      title="My Hours Today"
+      value={clockIn ? elapsed : "—"}
+      subtitle={clockIn ? "Live · current session" : "Not clocked in"}
+      icon={<Timer className="h-4 w-4" />}
+      accentClass="bg-emerald-500"
+      isLoading={isLoading}
+      onClick={onClick}
+    />
+  );
+}
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { me, isAdmin } = useMe();
@@ -87,6 +152,8 @@ export default function Dashboard() {
     ? weeklyHours
     : weeklyHours?.filter((emp) => emp.employeeId === me?.id);
 
+  const myActiveEntry = status?.clockedInEmployees?.find((e) => e.employeeId === me?.id);
+
   return (
     <div className="grid gap-4 md:gap-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -99,15 +166,23 @@ export default function Dashboard() {
           isLoading={statusLoading}
           onClick={() => setLocation("/time-entries")}
         />
-        <StatCard
-          title="Today's Hours"
-          value={`${status?.todayTotalHours?.toFixed(1) ?? "0.0"} hrs`}
-          subtitle="Total hours tracked today"
-          icon={<Clock className="h-4 w-4" />}
-          accentClass="bg-emerald-500"
-          isLoading={statusLoading}
-          onClick={() => setLocation("/time-entries")}
-        />
+        {isAdmin ? (
+          <StatCard
+            title="Today's Hours"
+            value={`${status?.todayTotalHours?.toFixed(1) ?? "0.0"} hrs`}
+            subtitle="Total hours tracked today"
+            icon={<Clock className="h-4 w-4" />}
+            accentClass="bg-emerald-500"
+            isLoading={statusLoading}
+            onClick={() => setLocation("/time-entries")}
+          />
+        ) : (
+          <MyHoursTodayCard
+            clockIn={myActiveEntry?.clockIn ?? null}
+            isLoading={statusLoading}
+            onClick={() => setLocation("/time-entries")}
+          />
+        )}
         <StatCard
           title="Pending Time Off"
           value={pendingRequests?.count ?? 0}
@@ -148,26 +223,11 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {status?.clockedInEmployees?.map((emp) => (
-                  <button
+                  <ClockedInRow
                     key={emp.employeeId}
+                    emp={emp}
                     onClick={() => setLocation("/time-entries")}
-                    className="w-full flex items-center justify-between rounded-xl bg-muted/30 px-4 py-3 hover:bg-muted/60 transition-colors group text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <EmployeeAvatar name={emp.employeeName} imageUrl={emp.imageUrl} size="md" />
-                      <div>
-                        <p className="text-sm font-semibold leading-none">{emp.employeeName}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{emp.department ?? "No Department"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Since {new Date(emp.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </button>
+                  />
                 ))}
               </div>
             )}
