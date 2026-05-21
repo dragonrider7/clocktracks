@@ -28,6 +28,8 @@ export * from './holidayInputRecurrenceType';
 export * from './holidayRecurrenceType';
 export * from './holidayUpdate';
 export * from './holidayUpdateRecurrenceType';
+export * from './licenseStatus';
+export * from './licenseStatusTier';
 export * from './listNotificationsParams';
 export * from './listTimeAdjustmentsParams';
 export * from './listTimeEntriesParams';

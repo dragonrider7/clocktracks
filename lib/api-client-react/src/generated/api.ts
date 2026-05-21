@@ -35,6 +35,7 @@ import type {
   Holiday,
   HolidayInput,
   HolidayUpdate,
+  LicenseStatus,
   ListNotificationsParams,
   ListTimeAdjustmentsParams,
   ListTimeEntriesParams,
@@ -135,6 +136,83 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetLicenseStatusUrl = () => {
+
+
+
+
+  return `/api/license`
+}
+
+/**
+ * @summary Get current license status
+ */
+export const getLicenseStatus = async ( options?: RequestInit): Promise<LicenseStatus> => {
+
+  return customFetch<LicenseStatus>(getGetLicenseStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLicenseStatusQueryKey = () => {
+    return [
+    `/api/license`
+    ] as const;
+    }
+
+
+export const getGetLicenseStatusQueryOptions = <TData = Awaited<ReturnType<typeof getLicenseStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLicenseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLicenseStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLicenseStatus>>> = ({ signal }) => getLicenseStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLicenseStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLicenseStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getLicenseStatus>>>
+export type GetLicenseStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get current license status
+ */
+
+export function useGetLicenseStatus<TData = Awaited<ReturnType<typeof getLicenseStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLicenseStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLicenseStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

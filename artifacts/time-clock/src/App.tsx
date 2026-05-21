@@ -19,6 +19,8 @@ import Profile from "@/pages/profile";
 import Holidays from "@/pages/holidays";
 import Admin from "@/pages/admin";
 import { MeProvider } from "@/contexts/me-context";
+import { LicenseProvider, useLicense } from "@/contexts/license-context";
+import LicenseExpired from "@/pages/license-expired";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,14 +182,36 @@ function LandingPage() {
   );
 }
 
+const LIMITED_BLOCKED = ["/reports", "/employees", "/holidays", "/admin"];
+const MINIMAL_ALLOWED = ["/dashboard", "/clock", "/profile"];
+
+function LicenseGate({ children }: { children: React.ReactNode }) {
+  const { tier } = useLicense();
+  const [location] = useLocation();
+
+  if (tier === "locked") return <LicenseExpired />;
+
+  if (tier === "minimal" && !MINIMAL_ALLOWED.includes(location)) {
+    return <Redirect to="/clock" />;
+  }
+
+  if (tier === "limited" && LIMITED_BLOCKED.includes(location)) {
+    return <Redirect to="/dashboard" />;
+  }
+
+  return <>{children}</>;
+}
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return (
     <>
       <Show when="signed-in">
         <MeProvider>
-          <Layout>
-            <Component />
-          </Layout>
+          <LicenseGate>
+            <Layout>
+              <Component />
+            </Layout>
+          </LicenseGate>
         </MeProvider>
       </Show>
       <Show when="signed-out">
@@ -226,6 +250,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <LicenseProvider>
         <TooltipProvider>
           <Switch>
             <Route path="/" component={HomeRedirect} />
@@ -244,6 +269,7 @@ function ClerkProviderWithRoutes() {
           </Switch>
           <Toaster />
         </TooltipProvider>
+        </LicenseProvider>
       </QueryClientProvider>
     </ClerkProvider>
   );

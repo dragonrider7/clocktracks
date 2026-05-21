@@ -591,6 +591,32 @@ export interface EmployeeTimesheet {
   entries: TimesheetEntry[];
 }
 
+export type LicenseStatusTier = typeof LicenseStatusTier[keyof typeof LicenseStatusTier];
+
+
+export const LicenseStatusTier = {
+  valid: 'valid',
+  expiring: 'expiring',
+  grace: 'grace',
+  limited: 'limited',
+  minimal: 'minimal',
+  locked: 'locked',
+  trial: 'trial',
+} as const;
+
+export interface LicenseStatus {
+  tier: LicenseStatusTier;
+  /** @nullable */
+  customer?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+  /** @nullable */
+  daysRemaining?: number | null;
+  valid: boolean;
+}
+
 export type ListTimeEntriesParams = {
 employeeId?: number;
 startDate?: string;

@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { Clock, LayoutDashboard, Users, Calendar, Table2, LogOut, ChevronDown, FileBarChart, UserCircle, Gift, Palette, Check, Bell, Settings, EyeOff, Eye, Menu } from "lucide-react";
 import { useClerk, useUser } from "@clerk/react";
 import { useMe } from "@/contexts/me-context";
+import { useLicense } from "@/contexts/license-context";
+import { LicenseBanner } from "@/components/license-banner";
 import { useTheme, THEMES } from "@/contexts/theme-context";
 import {
   useGetUnreadNotificationCount,
@@ -149,8 +151,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { me, isAdmin, isViewingAsEmployee, setIsViewingAsEmployee } = useMe();
   const isActualAdmin = me?.role === "admin";
   const { theme, setTheme } = useTheme();
+  const { tier } = useLicense();
   const [imgError, setImgError] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const licenseHiddenRoutes =
+    tier === "minimal" || tier === "locked"
+      ? ["/employees", "/time-entries", "/time-off", "/holidays", "/reports", "/admin"]
+      : tier === "limited"
+        ? ["/employees", "/holidays", "/reports", "/admin"]
+        : [];
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false, alwaysForAdmin: false },
@@ -161,7 +171,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/holidays", label: "Holidays", icon: Gift, adminOnly: true, alwaysForAdmin: false },
     { href: "/reports", label: "Reports", icon: FileBarChart, adminOnly: true, alwaysForAdmin: false },
     { href: "/admin", label: "Admin", icon: Settings, adminOnly: true, alwaysForAdmin: true },
-  ].filter((item) => item.alwaysForAdmin ? isActualAdmin : (!item.adminOnly || isAdmin));
+  ]
+    .filter((item) => item.alwaysForAdmin ? isActualAdmin : (!item.adminOnly || isAdmin))
+    .filter((item) => !licenseHiddenRoutes.includes(item.href));
 
   const initials = me?.name
     ? me.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -193,6 +205,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <LicenseBanner />
       {isViewingAsEmployee && (
         <div className="bg-amber-100 border-b border-amber-300 px-4 py-2 text-sm text-amber-900 flex items-center justify-between">
           <div className="flex items-center gap-2">

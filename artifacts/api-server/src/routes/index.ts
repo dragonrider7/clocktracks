@@ -9,9 +9,11 @@ import reportsRouter from "./reports";
 import holidaysRouter from "./holidays";
 import timeAdjustmentsRouter from "./timeAdjustments";
 import notificationsRouter from "./notifications";
+import licenseRouter from "./license";
 
 const router: IRouter = Router();
 
+router.use(licenseRouter);
 router.use(healthRouter);
 router.use(meRouter);
 router.use(employeesRouter);

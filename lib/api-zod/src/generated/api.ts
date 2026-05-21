@@ -28,6 +28,19 @@ export const GetMeResponse = zod.object({
 
 
 /**
+ * @summary Get current license status
+ */
+export const GetLicenseStatusResponse = zod.object({
+  "tier": zod.enum(['valid', 'expiring', 'grace', 'limited', 'minimal', 'locked', 'trial']),
+  "customer": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "expiresAt": zod.string().nullish(),
+  "daysRemaining": zod.number().nullish(),
+  "valid": zod.boolean()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
