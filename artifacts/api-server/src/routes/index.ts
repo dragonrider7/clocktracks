@@ -11,12 +11,10 @@ import holidaysRouter from "./holidays";
 import timeAdjustmentsRouter from "./timeAdjustments";
 import notificationsRouter from "./notifications";
 import licenseRouter from "./license";
-import configRouter from "./config";
 
 const router: IRouter = Router();
 
 router.use(licenseRouter);
-router.use(configRouter);
 router.use(healthRouter);
 router.use(superAdminRouter);
 router.use(meRouter);

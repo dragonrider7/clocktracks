@@ -18,7 +18,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Pencil, Filter, PlusCircle } from "lucide-react";
 import { useMe } from "@/contexts/me-context";
-import { LiveDuration } from "@/components/live-duration";
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
@@ -453,17 +452,7 @@ export default function TimeEntries() {
                         ? new Date(entry.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                         : "—"}
                   </TableCell>
-                  <TableCell>
-                    {entry.kind === "work" && !entry.clockOut ? (
-                      <LiveDuration
-                        clockIn={entry.clockIn}
-                        showDot
-                        className="text-sm font-semibold text-green-700"
-                      />
-                    ) : (
-                      formatDuration(entry.totalMinutes)
-                    )}
-                  </TableCell>
+                  <TableCell>{formatDuration(entry.totalMinutes)}</TableCell>
                   <TableCell>
                     {entry.kind === "work" && !entry.clockOut ? (
                       <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>

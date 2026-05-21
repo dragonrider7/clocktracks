@@ -84,11 +84,8 @@ router.get("/me", async (req, res): Promise<void> => {
     return;
   }
 
-  // Use the primary email from Clerk (find by primaryEmailAddressId, fall back to index 0)
-  const primaryEmailObj =
-    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId) ??
-    clerkUser.emailAddresses[0];
-  const email = primaryEmailObj?.emailAddress?.trim() ?? null;
+  // Use the primary email from Clerk, trimmed
+  const email = clerkUser.emailAddresses?.[0]?.emailAddress?.trim() ?? null;
 
   // 3. Has anyone ever signed in? (any employee with a linked Clerk user ID)
   //    Using linked count rather than total count so pre-seeded employee
