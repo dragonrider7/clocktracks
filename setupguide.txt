@@ -1,0 +1,133 @@
+TimeClock — Setup Guide
+=======================
+
+REQUIREMENTS
+------------
+- A Windows, Mac, or Linux PC that will act as the server
+- Docker Desktop installed and running
+  Download: https://www.docker.com/products/docker-desktop
+
+
+STEP 1 — INSTALL DOCKER DESKTOP
+--------------------------------
+1. Download Docker Desktop from the link above
+2. Install and launch it
+3. Make sure the Docker icon appears in your taskbar/menu bar before continuing
+
+
+STEP 2 — CREATE YOUR ENVIRONMENT FILE
+--------------------------------------
+1. In the unzipped TimeClock folder, find the file: .env.docker.example
+2. Make a copy of it in the same folder and name the copy: .env.docker
+3. Open .env.docker in Notepad (or any text editor) and fill in each value:
+
+   DB_PASSWORD=
+     Pick any password for the database. No spaces or @ symbols.
+     Example: DB_PASSWORD=mySecurePass123
+
+   SESSION_SECRET=
+     Any long random string. Just smash the keyboard for 20+ characters.
+     Example: SESSION_SECRET=k9fj2nxq8vbzw3pmrt6yhs
+
+   CLERK_SECRET_KEY=
+     From Clerk (see Step 3 below).
+
+   CLERK_PUBLISHABLE_KEY=
+     From Clerk (see Step 3 below).
+
+   VITE_CLERK_PUBLISHABLE_KEY=
+     Same value as CLERK_PUBLISHABLE_KEY above.
+
+   LICENSE_KEY=
+     The TC-... key provided by your vendor.
+     Leave blank to run in trial mode.
+
+   APP_PORT=80
+     The port the app will be available on.
+     Change to 8080 if port 80 is already in use on this PC.
+
+
+STEP 3 — SET UP CLERK (FREE, ONE-TIME)
+---------------------------------------
+Clerk handles user login. You need a free account to get API keys.
+
+1. Go to https://clerk.com and sign up for a free account
+2. Click "Create application"
+   - Give it any name (e.g. "TimeClock")
+   - Enable "Email" and "Google" as sign-in options
+3. You will land on the API Keys page
+   - Copy the "Secret key" (starts with sk_live_...) into CLERK_SECRET_KEY
+   - Copy the "Publishable key" (starts with pk_live_...) into both
+     CLERK_PUBLISHABLE_KEY and VITE_CLERK_PUBLISHABLE_KEY
+4. In the Clerk dashboard left sidebar, go to "Domains"
+   - Add your server's local IP address (e.g. 192.168.1.100)
+   - If you will also access it from the same PC, add "localhost" as well
+
+
+STEP 4 — START THE APP
+------------------------
+Windows:  Double-click start.bat
+Mac/Linux: Open a terminal in the folder and run: ./start.sh
+
+The first time you start it, Docker will download and build everything.
+This takes 5-10 minutes. Subsequent starts take about 30 seconds.
+
+When you see "TimeClock is running", open your browser and go to:
+  http://localhost        (if APP_PORT=80)
+  http://localhost:8080   (if APP_PORT=8080)
+
+
+STEP 5 — FIRST LOGIN
+----------------------
+1. Click "Create Account" and register with your email
+2. The FIRST account created automatically becomes the admin
+3. All employees sign up after you — they get employee-level access
+
+To access the app from other computers on your network, use the
+server's IP address instead of localhost. Example:
+  http://192.168.1.100
+
+
+STEP 6 — LICENSE KEY
+---------------------
+If you received a license key (TC-...) from your vendor:
+1. Sign in as admin
+2. Click your name in the top-right corner
+3. Select "License" from the dropdown
+4. Paste the key into the text box and click "Activate Key"
+
+Without a key the app runs in trial mode (full access with a notice banner).
+When a key expires, features are gradually reduced until a new key is entered.
+Contact your vendor to request a renewal key.
+
+
+STOPPING THE APP
+-----------------
+Windows:  Double-click stop.bat
+Mac/Linux: Run ./stop.sh
+
+Your data is stored in a Docker volume and is preserved between restarts.
+
+
+TROUBLESHOOTING
+----------------
+App won't start:
+  - Make sure Docker Desktop is open and running
+  - Check that .env.docker exists (not just .env.docker.example)
+  - Make sure all required fields in .env.docker are filled in
+
+Port already in use:
+  - Change APP_PORT=80 to APP_PORT=8080 in .env.docker and restart
+
+Can't reach from other computers:
+  - Make sure your firewall allows the port you chose (80 or 8080)
+  - Use the server's IP address, not "localhost"
+
+Forgot admin password:
+  - Go to the login page and use "Forgot password"
+  - Password reset is handled through Clerk (uses your email)
+
+
+SUPPORT
+--------
+For license renewals or technical help, contact: support@clocktracks.com
