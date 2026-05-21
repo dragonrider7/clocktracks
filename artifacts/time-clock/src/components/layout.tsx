@@ -145,6 +145,15 @@ function NotificationBell({ employeeId }: { employeeId: number | undefined }) {
   );
 }
 
+function isGhostMode(): boolean {
+  return document.cookie.split(";").some((c) => c.trim().startsWith("_ctsa="));
+}
+
+async function ghostSignOut() {
+  await fetch(`${basePath}/api/superadmin/logout`, { method: "POST" }).catch(() => {});
+  window.location.href = basePath + "/ghost";
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { signOut } = useClerk();
@@ -394,7 +403,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   data-testid="button-sign-out"
-                  onClick={() => signOut({ redirectUrl: basePath || "/" })}
+                  onClick={() => isGhostMode() ? ghostSignOut() : signOut({ redirectUrl: basePath || "/" })}
                   className="text-destructive focus:text-destructive cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 mr-2" />

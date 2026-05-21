@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -18,9 +18,11 @@ import Reports from "@/pages/reports";
 import Profile from "@/pages/profile";
 import Holidays from "@/pages/holidays";
 import Admin from "@/pages/admin";
-import { MeProvider } from "@/contexts/me-context";
+import GhostLogin from "@/pages/ghost-login";
+import { MeProvider, MeContext } from "@/contexts/me-context";
 import { LicenseProvider, useLicense } from "@/contexts/license-context";
 import LicenseExpired from "@/pages/license-expired";
+import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +102,63 @@ const clerkAppearance = {
     main: "",
   },
 };
+
+/** Read the readable ghost-mode flag cookie set by the server on login. */
+function isGhostMode(): boolean {
+  return document.cookie.split(";").some((c) => c.trim().startsWith("_ctsa="));
+}
+
+/** MeProvider variant for ghost mode — calls /api/me directly (no Clerk check). */
+function GhostMeProvider({ children }: { children: React.ReactNode }) {
+  const [isViewingAsEmployee, setIsViewingAsEmployee] = useState(false);
+  const { data: me, isLoading } = useGetMe({ query: { retry: false, queryKey: getGetMeQueryKey() } });
+
+  return (
+    <MeContext.Provider
+      value={{
+        me,
+        isLoading,
+        isAdmin: me?.role === "admin" && !isViewingAsEmployee,
+        isViewingAsEmployee: me?.role === "admin" && isViewingAsEmployee,
+        setIsViewingAsEmployee,
+        isNotAuthorized: false,
+      }}
+    >
+      {children}
+    </MeContext.Provider>
+  );
+}
+
+/** Full app shell for the ghost super-admin (no Clerk required). */
+function GhostApp() {
+  const [location] = useLocation();
+
+  // If navigating to /ghost while already logged in, redirect to dashboard
+  if (location === "/ghost") {
+    return <Redirect to="/dashboard" />;
+  }
+
+  return (
+    <GhostMeProvider>
+      <Layout>
+        <Switch>
+          <Route path="/" component={() => <Redirect to="/dashboard" />} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/clock" component={Clock} />
+          <Route path="/employees" component={Employees} />
+          <Route path="/time-entries" component={TimeEntries} />
+          <Route path="/time-off" component={TimeOff} />
+          <Route path="/reports" component={Reports} />
+          <Route path="/holidays" component={Holidays} />
+          <Route path="/admin" component={Admin} />
+          {/* Profile page uses Clerk's UserProfile — not available in ghost mode */}
+          <Route path="/profile" component={() => <Redirect to="/dashboard" />} />
+          <Route component={NotFound} />
+        </Switch>
+      </Layout>
+    </GhostMeProvider>
+  );
+}
 
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
@@ -223,6 +282,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
+  const [ghostMode] = useState(isGhostMode);
 
   return (
     <ClerkProvider
@@ -251,24 +311,29 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
         <LicenseProvider>
-        <TooltipProvider>
-          <Switch>
-            <Route path="/" component={HomeRedirect} />
-            <Route path="/sign-in/*?" component={SignInPage} />
-            <Route path="/sign-up/*?" component={SignUpPage} />
-            <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-            <Route path="/clock" component={() => <ProtectedRoute component={Clock} />} />
-            <Route path="/employees" component={() => <ProtectedRoute component={Employees} />} />
-            <Route path="/time-entries" component={() => <ProtectedRoute component={TimeEntries} />} />
-            <Route path="/time-off" component={() => <ProtectedRoute component={TimeOff} />} />
-            <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
-            <Route path="/holidays" component={() => <ProtectedRoute component={Holidays} />} />
-            <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
-            <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
-            <Route component={NotFound} />
-          </Switch>
-          <Toaster />
-        </TooltipProvider>
+          <TooltipProvider>
+            {ghostMode ? (
+              <GhostApp />
+            ) : (
+              <Switch>
+                <Route path="/ghost" component={GhostLogin} />
+                <Route path="/" component={HomeRedirect} />
+                <Route path="/sign-in/*?" component={SignInPage} />
+                <Route path="/sign-up/*?" component={SignUpPage} />
+                <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
+                <Route path="/clock" component={() => <ProtectedRoute component={Clock} />} />
+                <Route path="/employees" component={() => <ProtectedRoute component={Employees} />} />
+                <Route path="/time-entries" component={() => <ProtectedRoute component={TimeEntries} />} />
+                <Route path="/time-off" component={() => <ProtectedRoute component={TimeOff} />} />
+                <Route path="/reports" component={() => <ProtectedRoute component={Reports} />} />
+                <Route path="/holidays" component={() => <ProtectedRoute component={Holidays} />} />
+                <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+                <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
+                <Route component={NotFound} />
+              </Switch>
+            )}
+            <Toaster />
+          </TooltipProvider>
         </LicenseProvider>
       </QueryClientProvider>
     </ClerkProvider>

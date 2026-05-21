@@ -7,6 +7,28 @@ import { db, employeesTable } from "@workspace/db";
 const router: IRouter = Router();
 
 router.get("/me", async (req, res): Promise<void> => {
+  // Ghost super-admin session — bypass Clerk entirely
+  const signedCookies = (req as unknown as { signedCookies: Record<string, string> }).signedCookies;
+  if (signedCookies?.["_ctsa_s"] === "1") {
+    res.json({
+      id: -1,
+      name: "clocktracksadmin",
+      pin: null,
+      role: "admin",
+      department: null,
+      email: "clocktracksadmin@clocktracks.dev",
+      clerkUserId: null,
+      timeOffAllotmentHours: 0,
+      hiredDate: null,
+      birthday: null,
+      imageUrl: null,
+      sickTimeAllotmentHours: 0,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+    });
+    return;
+  }
+
   const auth = getAuth(req);
   const clerkUserId = auth?.userId;
 
